@@ -1,0 +1,10 @@
+MANIFEST.in
+README.txt
+httpclient.py
+setup.py
+httpclient.egg-info/PKG-INFO
+httpclient.egg-info/SOURCES.txt
+httpclient.egg-info/dependency_links.txt
+httpclient.egg-info/top_level.txt
+tests/__init__.py
+tests/test_lib.py

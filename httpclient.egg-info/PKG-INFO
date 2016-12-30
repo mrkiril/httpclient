@@ -1,0 +1,15 @@
+Metadata-Version: 1.0
+Name: httpclient
+Version: 0.1
+Summary: HTTP lib with keep alive connections
+Home-page: www.google.com.ua
+Author: Kyrylo Kukhelnyi
+Author-email: mrkiril@ukr.net
+License: BSD
+Description: Description
+        ===========
+        
+        Python Http Client Lib. With PEP8 standarts
+        
+Keywords: http request keep alive
+Platform: UNKNOWN
