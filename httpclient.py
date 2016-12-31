@@ -46,11 +46,11 @@ class HttpClient(object):
         self.file_path = os.path.abspath(os.path.dirname(__file__))
         self.load_cookie = os.path.join(self.file_path, 'cookie.txt')
         self.save_cookie = os.path.join(self.file_path, 'cookie.txt')
-        self.connect_timeout = 10
+        self.connect_timeout = 15
         self.transfer_timeout = 30
         self.max_redirects = 10
         self.set_referer = True
-        self.keep_alive = 3
+        self.keep_alive = 5
         # send custom headers
         self.headers_for_request = [
             ('User-Agent', 'Opera/9.80 (iPhone; Opera Mini/7.0.4/28.2555;'
