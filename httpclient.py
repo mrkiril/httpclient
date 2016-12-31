@@ -236,9 +236,9 @@ class HttpClient(object):
             except SocketFallError as e:
                 # logger
                 self.logger.error('SocketFallError, reload socket ...')
-                print(self.soket_dic.keys())
+                #print(self.soket_dic.keys())
                 self.del_sock()
-                print(self.soket_dic.keys())
+                #print(self.soket_dic.keys())
                 continue
 
             except socket.timeout as e:
@@ -253,9 +253,9 @@ class HttpClient(object):
                 self.soket_dic.pop(self.host)
                 # logger
                 self.logger.error('OSError' + str(e.args))
-                print(self.soket_dic.keys())
+                #print(self.soket_dic.keys())
                 self.del_sock()
-                print(self.soket_dic.keys())
+                #print(self.soket_dic.keys())
                 continue
 
             else:
@@ -611,7 +611,16 @@ class HttpClient(object):
         byte_len = 100
         start_page_index = 0
         page_str = b""
+        page_bytes += self.soket_recv(2048, transfer_timeout)[1]
         pattern = re.search(b"(\w+?)\r\n", page_bytes).group(1)
+        #try:
+        #    pattern = re.search(b"(\w+?)\r\n", page_bytes).group(1)
+        #except AttributeError as e:
+        #    print(page_bytes)
+        #else:
+        #    pass
+                    
+        
         content_pattern = None
 
         if "output" in kwargs:
@@ -632,9 +641,9 @@ class HttpClient(object):
                               page_bytes[start_page_index:])
 
             if m_len is None:
-                print("len: ", m_len)
-                print(page_bytes[start_page_index:])
-                print("\n\n")
+                #print("len: ", m_len)
+                #print(page_bytes[start_page_index:])
+                #print("\n\n")
                 response = self.soket_recv(2048, transfer_timeout)
                 if response[0]:
                     page_bytes += response[1]
