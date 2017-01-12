@@ -197,11 +197,10 @@ class HttpClient(object):
                     if self.ipfromhost(self.host) is not None:
                         addr = (self.ipfromhost(self.host), 80)
                     
-                    if self.ipfromhost(self.host) is None:
-                        print("HOST IS DICK ERROR ERROR")
+                    if self.ipfromhost(self.host) is None:                        
                         addr = (self.host, 80)
                     
-                    self.logger.info( str(self.host))
+                    #self.logger.info( str(self.host))
                     if ":" in self.host:
                         n_host = self.host.split(":")
                         addr = (n_host[0], int(n_host[1]))
@@ -276,10 +275,8 @@ class HttpClient(object):
 
             except SocketFallError as e:
                 # logger
-                self.logger.error('SocketFallError, reload socket ...')
-                #print(self.soket_dic.keys())
-                self.del_sock()
-                #print(self.soket_dic.keys())
+                self.logger.error('SocketFallError, reload socket ...')                
+                self.del_sock()                
                 return(False, "", "")
 
             except socket.timeout as e:
@@ -568,8 +565,7 @@ class HttpClient(object):
 
         return (True, this_stack_bytes)
 
-    def soket_req(self, q):
-        self.logger.info("Socket req foo")
+    def soket_req(self, q):        
         #self.sock.settimeout(self.connect_timeout)
         num = self.sock.send(q)
         #self.sock.settimeout(None)
@@ -624,7 +620,6 @@ class HttpClient(object):
         return (header, cookies_list)
 
     def content_length_nonblocking(self):
-        #try:
             self.logger.info("Conent len mode")  
             self.logger.info("len is: "+str(self.headers["Content-Length"]))           
             page_bytes = self.data[self.start_index:]
@@ -690,9 +685,7 @@ class HttpClient(object):
                     if self.encoding is None:
                         self.page = ""
                     return (True, self.page)
-        #except Exception as e:
-        #    raise e
-        #    print(e)
+
      
     def content_length(self, page_bytes, transfer_timeout, kwargs, max_size):
         page = ""
@@ -850,10 +843,7 @@ class HttpClient(object):
             m_len = re.search(b"(\r\n)?(.+?)\r\n",
                               page_bytes[start_page_index:])
 
-            if m_len is None:
-                #print("len: ", m_len)
-                #print(page_bytes[start_page_index:])
-                #print("\n\n")
+            if m_len is None:                
                 response = self.soket_recv(2048, transfer_timeout)
                 if response[0]:
                     page_bytes += response[1]
@@ -1001,24 +991,16 @@ class HttpClient(object):
     def sendnonblock(self): 
         try: 
             if type(self.nonblocking_stack[self.send_stack_index]) is bytes:            
-                
-                print("stack index: ", self.send_stack_index ) 
-                print("len 0", len( self.nonblocking_stack[0] )) 
-                #print("len 1", len( self.nonblocking_stack[1] ))   
                 num = self.soket_req( self.nonblocking_stack[self.send_stack_index][self.send_byte_index:] )
                 self.send_byte_index += num
                 
                 if self.send_byte_index == len(self.nonblocking_stack[self.send_stack_index]):
-                    print("stack position: ", self.send_stack_index)
-                    print("index position: ", self.send_byte_index)
                     self.send_stack_index += 1
                     self.send_byte_index = 0
                     self.nonblocking_stack[self.send_stack_index]                    
                     return False
                                 
-                else:                    
-                    print("stack position: ", self.send_stack_index)
-                    print("index position: ", self.send_byte_index)
+                else:
                     return False
 
             elif type(self.nonblocking_stack[self.send_stack_index]) is io.TextIOWrapper:
@@ -1040,16 +1022,14 @@ class HttpClient(object):
                         self.send_byte_index = 0   
                         return False
         except IndexError as e:
-            self.logger.info("Index error all data send")
-            #print(self.nonblocking_stack)
+            self.logger.info("all data send")            
             return True
 
     def recvnonblock(self):
         try:          
-            if self.isheaders == False:
-                self.logger.info("recv 65535")
+            if self.isheaders == False:                
                 self.data += self.sock.recv(65535)
-                self.logger.info("O lala")
+                self.logger.info("recv 65535")
                 status = re.search(b"HTTP.*? (\d+) ", self.data[:16])
                 if status is None:
                     # logger
@@ -1118,8 +1098,7 @@ class HttpClient(object):
                         self.cookies_funk(cookies_list, self.host)
                         self.isheaders = True
 
-            if self.isheaders == True and self.isbody == False:
-                    self.logger.info("self.isbody >>>"+str(self.isbody))
+            if self.isheaders == True and self.isbody == False:                    
                     if self.type_req == "HEAD":
                         self.isbody = True                        
 
@@ -1203,7 +1182,7 @@ class HttpClient(object):
     def isready(self):
         try:    
             if self.isconnect == False:
-                self.logger.info("Connect mode")
+                self.logger.info("Connect mode "+str(self.host))
                 response = self.connect(
                     url=self.url,
                     kwargs=self.kwargs,
@@ -1230,8 +1209,7 @@ class HttpClient(object):
                     self.isconnect = False
              
             if self.isconnect == True and self.issend == False:
-                self.logger.info("Send mode")
-                self.logger.info(self.url)
+                self.logger.info("Send mode "+str(self.host))                
                 issend = self.sendnonblock()
                 self.logger.info("issend block: "+str(issend))       
                 if issend == True:
@@ -1244,13 +1222,10 @@ class HttpClient(object):
                     self.issend = False
                     self.logger.info("Issend False")
             
-            if self.isconnect == True and self.issend == True:                        
-                print("\r\n")
-                print("*"*100)
-                self.logger.info("Recv mode")
+            if self.isconnect == True and self.issend == True:
+                self.logger.info("Recv mode  "+str(self.host))
                 isrecv, describe = self.recvnonblock()
-                self.logger.error("isrecv: "+  str(isrecv))
-                self.logger.error("describe: "+ str(describe))
+                self.logger.info("isrecv: "+  str(isrecv))                
                 
                 if isrecv == True and describe == "ok":
                     self.isrecv = True
@@ -1297,8 +1272,7 @@ class HttpClient(object):
                 self.logger.error(self.url)
                 self.logger.info("All data is here")
                 return True
-            else:
-                self.logger.error(self.url)
+            else:                
                 self.logger.error("Resource temporarily unavailable")
                 return False
          
@@ -1651,12 +1625,7 @@ class HttpClient(object):
         url = link_el[0] + payload_el
         start_host = link_el[1]
         start_cook_pattern = link_el[2]
-
-        self.host = start_host
-        #print("start_cook_pattern:", start_url_and_query)
-        #print("start_host:", start_host)
-        #print("start_cook_pattern:", start_cook_pattern)
-        #_=input("Break point ...")
+        self.host = start_host       
 
         # Fiend Cookies for Request
         self.cook_dick = self.load_cookies(self.load_cookie)
