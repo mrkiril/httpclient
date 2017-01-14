@@ -146,6 +146,7 @@ class HttpClient(object):
             return urls_dic[host]
         else:
             return None
+    
     def size_base64(self, size_):
         z = (size_ // 3)
         if size_ % 3 != 0:
@@ -195,6 +196,7 @@ class HttpClient(object):
                         socket.AF_INET, socket.SOCK_STREAM)
 
                     if self.ipfromhost(self.host) is not None:
+                        self.logger.info('IP from dick')
                         addr = (self.ipfromhost(self.host), 80)
                     
                     if self.ipfromhost(self.host) is None:                        
@@ -565,7 +567,7 @@ class HttpClient(object):
 
         return (True, this_stack_bytes)
 
-    def soket_req(self, q):        
+    def soket_req(self, q):
         #self.sock.settimeout(self.connect_timeout)
         num = self.sock.send(q)
         #self.sock.settimeout(None)
@@ -686,7 +688,6 @@ class HttpClient(object):
                         self.page = ""
                     return (True, self.page)
 
-     
     def content_length(self, page_bytes, transfer_timeout, kwargs, max_size):
         page = ""
         if "on_headers" in kwargs:
@@ -989,17 +990,18 @@ class HttpClient(object):
         return None
 
     def sendnonblock(self): 
-        try: 
+        try:
+            print(self.nonblocking_stack)
             if type(self.nonblocking_stack[self.send_stack_index]) is bytes:            
                 num = self.soket_req( self.nonblocking_stack[self.send_stack_index][self.send_byte_index:] )
                 self.send_byte_index += num
-                
+                print( len(self.nonblocking_stack[self.send_stack_index]) )
+                print( self.send_byte_index )
                 if self.send_byte_index == len(self.nonblocking_stack[self.send_stack_index]):
                     self.send_stack_index += 1
                     self.send_byte_index = 0
                     self.nonblocking_stack[self.send_stack_index]                    
                     return False
-                                
                 else:
                     return False
 
@@ -1027,16 +1029,17 @@ class HttpClient(object):
 
     def recvnonblock(self):
         try:          
-            if self.isheaders == False:                
+            if self.isheaders == False:
                 self.data += self.sock.recv(65535)
-                self.logger.info("recv 65535")
+                self.logger.info("recv 65535")                
                 status = re.search(b"HTTP.*? (\d+) ", self.data[:16])
                 if status is None:
                     # logger
                     self.logger.error("Critical ERROR: No status code!")
                     return (False, "error")
                 self.status_code = status.group(1)
-                if status is not None:
+                self.logger.info("status code: "+str(self.status_code))
+                if status is not None:                    
                     if status.group(1)[0] == "5":
                         if (self.retry_index >= retry and
                                 self.raise_on_error):
@@ -1096,9 +1099,32 @@ class HttpClient(object):
 
                         # cookies_list string with cookies (not parsinf).
                         self.cookies_funk(cookies_list, self.host)
+                        #print(self.headers)
+                        if self.status_code in [b"301", b"302"]:
+                            #print("AAAAAAAAAAAAAAAAAAAA")
+                            self.isconnect = False
+                            self.issend = False
+                            self.isrecv = False
+                            self.isheaders = False
+                            self.firstin = True
+                            self.send_stack_index = 0
+                            self.send_byte_index = 0
+                            self.data = b""
+
+                            cookies_url = self.status_200_300(
+                                self.headers["Location"], {})
+                            self.url_previos = self.url       # url for Referrer
+                            self.url = cookies_url[1]    # URL for next step
+                            # COOKIE for next step
+                            self.cookies = cookies_url[0]
+                            self.host = cookies_url[2]  # Host for next step
+                            #print( self.host == cookies_url[2])
+                            #self.del_sock()
+                            return (False, "error")
+                        
                         self.isheaders = True
 
-            if self.isheaders == True and self.isbody == False:                    
+            if self.isheaders == True and self.isbody == False:
                     if self.type_req == "HEAD":
                         self.isbody = True                        
 
@@ -1170,7 +1196,6 @@ class HttpClient(object):
             raise e   
             return (True , "continue")
 
-
         else:
             if self.isbody == True:
                 return (True, "ok")
@@ -1180,7 +1205,12 @@ class HttpClient(object):
 
     # for nonblocking mode
     def isready(self):
-        try:    
+        try:
+            print( self.url)
+            print("issend: ", self.issend)  
+            print("isconnect: ", self.isconnect)
+            print("isheaders: ", self.isheaders)
+            print("isrecv: ", self.isrecv)  
             if self.isconnect == False:
                 self.logger.info("Connect mode "+str(self.host))
                 response = self.connect(
@@ -1200,7 +1230,7 @@ class HttpClient(object):
                     request_str = response[2]
                     self.isconnect = True
                     self.soket_funk(self.url, self.kwargs, self.headers_all,
-                                                  self.url_previos, self.type_req,self.bytes_to_send)
+                                                  self.url_previos, self.type_req, self.bytes_to_send)
                 
                 # Connection to socket: ERROR
                 if not response[0]:
@@ -1283,7 +1313,6 @@ class HttpClient(object):
             else:
                 self.logger.info("isready() : Isrecv False")
                 return False 
-    
     
     def structure(self, url, kwargs, headers_all, url_previos, type_req,
                   bytes_to_send, transfer_timeout, redirect_counter, max_redir, max_size, retry):
@@ -1529,7 +1558,6 @@ class HttpClient(object):
                     # write cook to the file
                     self.write_cookies(self.cook_dick, self.save_cookie)
                     return self
-
                     break
 
             # Counter of redirext
