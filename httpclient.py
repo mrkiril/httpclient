@@ -141,7 +141,14 @@ class HttpClient(object):
           "yahoo.com":"98.138.253.109" ,
           "bing.com":"204.79.197.200",
           "yandex.ru":"5.255.255.50",
-          "mail.ru":"94.100.180.201"}
+          "mail.ru":"94.100.180.201",
+          
+          "www.bing.com":"204.79.197.200",
+          "www.google.com.ua":"173.194.113.215",
+          "search.yahoo.com":"188.125.66.104",
+          "go.mail.ru":"217.69.139.53",
+          "www.sputnik.ru":"5.143.224.19"          
+          }
         if host in urls_dic:
             return urls_dic[host]
         else:
@@ -195,6 +202,7 @@ class HttpClient(object):
                     self.sock = socket.socket(
                         socket.AF_INET, socket.SOCK_STREAM)
 
+                    self.logger.info("Host: "+ str(self.host))
                     if self.ipfromhost(self.host) is not None:
                         self.logger.info('IP from dick')
                         addr = (self.ipfromhost(self.host), 80)
@@ -209,6 +217,7 @@ class HttpClient(object):
 
                     self.sock.settimeout(self.connect_timeout)                    
                     self.sock.connect(addr)                    
+                    #self.logger.info( str(self.sock))
                     if self.nonblocking == True:
                         self.sock.settimeout(0)
                     if self.nonblocking == False:
@@ -991,12 +1000,12 @@ class HttpClient(object):
 
     def sendnonblock(self): 
         try:
-            print(self.nonblocking_stack)
+            #print(self.nonblocking_stack)
             if type(self.nonblocking_stack[self.send_stack_index]) is bytes:            
                 num = self.soket_req( self.nonblocking_stack[self.send_stack_index][self.send_byte_index:] )
                 self.send_byte_index += num
-                print( len(self.nonblocking_stack[self.send_stack_index]) )
-                print( self.send_byte_index )
+                #print( len(self.nonblocking_stack[self.send_stack_index]) )
+                #print( self.send_byte_index )
                 if self.send_byte_index == len(self.nonblocking_stack[self.send_stack_index]):
                     self.send_stack_index += 1
                     self.send_byte_index = 0
