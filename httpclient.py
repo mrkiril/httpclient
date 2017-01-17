@@ -13,7 +13,6 @@ import string
 import math
 import hashlib
 import errno
-import select
 import os
 import os.path
 import io
@@ -1697,16 +1696,14 @@ class HttpClient(object):
             children.retry=retry
             children.logger=self.logger
 
-            children.data = b""
-            children.epoll = select.epoll() 
+            children.data = b""             
             children.nonblocking = True
             children.isconnect = False
             children.issend = False
             
             children.isheaders = False 
             children.isbody = False
-            children.isrecv = False           
-            #children.epoll.register(self.sock.fileno(), select.EPOLLOUT)   
+            children.isrecv = False
             return children
 
 
@@ -1847,16 +1844,14 @@ class HttpClient(object):
             children.retry=retry
             children.logger=self.logger
 
-            children.data = b""
-            children.epoll = select.epoll() 
+            children.data = b""            
             children.nonblocking = True
             children.isconnect = False
             children.issend = False
             
             children.isheaders = False 
             children.isbody = False
-            children.isrecv = False           
-            #children.epoll.register(self.sock.fileno(), select.EPOLLOUT)   
+            children.isrecv = False
             return children
 
 
