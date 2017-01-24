@@ -18,6 +18,7 @@ import os.path
 import io
 import traceback
 
+
 class SocketFallError(Exception):
 
     def __init__(self, value):
@@ -68,7 +69,6 @@ class HttpClient(object):
         self.send_stack_index = 0
         self.send_byte_index = 0
 
-
         if "load_cookie" in kwargs:
             self.load_cookie = kwargs["load_cookie"]
         if "save_cookie" in kwargs:
@@ -93,15 +93,15 @@ class HttpClient(object):
             self.retry = kwargs["retry"]
         if "retry_delay" in kwargs:
             self.retry_delay = kwargs["retry_delay"]
-        
+
         self.req_line = b""
         self.is_f_req = True
         self.cook_dick = {}
-        #for nonblocking
+        # for nonblocking
         self.isconnect = False
         self.issend = False
-        self.isrecv = False 
-        
+        self.isrecv = False
+
         self.response_str = ""
         # self.soket_dic[Host] = { "socket": sock, "index" : index}
         self.soket_dic = {}
@@ -127,7 +127,7 @@ class HttpClient(object):
         self.page = ""
         self.firstin = True
         self.chunked_index = 0
-        self.page_str = b"" # for chunked module nonblocking
+        self.page_str = b""  # for chunked module nonblocking
 
     def __del__(self):
         # self.soket_dic[Host] = { "socket": sock, "index" : index}
@@ -135,24 +135,24 @@ class HttpClient(object):
             v["socket"].close()
 
     def ipfromhost(self, host):
-        urls_dic={
-          "www.google.com":"173.194.113.208",
-          "yahoo.com":"98.138.253.109" ,
-          "bing.com":"204.79.197.200",
-          "yandex.ru":"5.255.255.50",
-          "mail.ru":"94.100.180.201",
-          
-          "www.bing.com":"204.79.197.200",
-          "www.google.com.ua":"173.194.113.215",
-          "search.yahoo.com":"188.125.66.104",
-          "go.mail.ru":"217.69.139.53",
-          "www.sputnik.ru":"5.143.224.19"          
-          }
+        urls_dic = {
+            "www.google.com": "173.194.113.208",
+            "yahoo.com": "98.138.253.109",
+            "bing.com": "204.79.197.200",
+            "yandex.ru": "5.255.255.50",
+            "mail.ru": "94.100.180.201",
+
+            "www.bing.com": "204.79.197.200",
+            "www.google.com.ua": "173.194.113.215",
+            "search.yahoo.com": "188.125.66.104",
+            "go.mail.ru": "217.69.139.53",
+            "www.sputnik.ru": "5.143.224.19"
+        }
         if host in urls_dic:
             return urls_dic[host]
         else:
             return None
-    
+
     def size_base64(self, size_):
         z = (size_ // 3)
         if size_ % 3 != 0:
@@ -181,18 +181,16 @@ class HttpClient(object):
             if self.host in self.soket_dic:
                 self.soket_dic.pop(self.host)
 
-    def connect(self, url, kwargs, headers_all, url_previos, type_req, bytes_to_send, transfer_timeout):
+    def connect(self, url, kwargs, headers_all, url_previos,
+                type_req, bytes_to_send, transfer_timeout):
         iterator = True
         while iterator:
             try:
                 if self.host in self.soket_dic and self.proxy is None:
                     # logger
                     self.logger.info('socket exist')
-                    #request_str = self.soket_funk(url, kwargs, headers_all,
-                    #                              url_previos, type_req,
-                    #                              bytes_to_send)
                     self.sock = self.soket_dic[self.host]["socket"]
-                    self.soket_dic[self.host]["index"] += 1                    
+                    self.soket_dic[self.host]["index"] += 1
                     self.is_f_req = False
 
                 if self.host not in self.soket_dic and self.proxy is None:
@@ -201,30 +199,26 @@ class HttpClient(object):
                     self.sock = socket.socket(
                         socket.AF_INET, socket.SOCK_STREAM)
 
-                    self.logger.info("Host: "+ str(self.host))
+                    self.logger.info("Host: " + str(self.host))
                     if self.ipfromhost(self.host) is not None:
                         self.logger.info('IP from dick')
                         addr = (self.ipfromhost(self.host), 80)
-                    
-                    if self.ipfromhost(self.host) is None:                        
+
+                    if self.ipfromhost(self.host) is None:
                         addr = (self.host, 80)
-                    
+
                     #self.logger.info( str(self.host))
                     if ":" in self.host:
                         n_host = self.host.split(":")
                         addr = (n_host[0], int(n_host[1]))
 
-                    self.sock.settimeout(self.connect_timeout)                    
-                    self.sock.connect(addr)                    
+                    self.sock.settimeout(self.connect_timeout)
+                    self.sock.connect(addr)
                     #self.logger.info( str(self.sock))
                     if self.nonblocking == True:
                         self.sock.settimeout(0)
                     if self.nonblocking == False:
                         self.sock.settimeout(None)
-
-                    #request_str = self.soket_funk(url, kwargs, headers_all,
-                    #                              url_previos, type_req,
-                    #                              bytes_to_send)
 
                     self.soket_dic[self.host] = {
                         "socket": self.sock, "index": 0}
@@ -246,10 +240,10 @@ class HttpClient(object):
                         self.sock = socket.socket(socket.AF_INET,
                                                   socket.SOCK_STREAM)
                         addr = (self.proxy[0], self.proxy[1])
-                        self.sock.settimeout(self.connect_timeout)                        
-                        self.sock.connect(addr)                        
+                        self.sock.settimeout(self.connect_timeout)
+                        self.sock.connect(addr)
                         self.sock.settimeout(0)
-                        #request_str = self.soket_funk(url, kwargs, headers_all,
+                        # request_str = self.soket_funk(url, kwargs, headers_all,
                         #                              url_previos, type_req,
                         #                              bytes_to_send)
 
@@ -262,7 +256,7 @@ class HttpClient(object):
                     if is_proxy_exist:
                         # logger
                         self.logger.info('Proxy socket exist')
-                        #request_str = self.soket_funk(url, kwargs, headers_all,
+                        # request_str = self.soket_funk(url, kwargs, headers_all,
                         #                              url_previos, type_req,
                         #                              bytes_to_send)
 
@@ -276,7 +270,7 @@ class HttpClient(object):
                 self.logger.error('ConnectionError' + str(e.args))
                 self.del_sock()
                 return(False, "", "")
-            
+
             except FileNotFoundError as e:
                 # logger
                 self.logger.error('FileNotFoundError' + str(e.args))
@@ -285,8 +279,8 @@ class HttpClient(object):
 
             except SocketFallError as e:
                 # logger
-                self.logger.error('SocketFallError, reload socket ...')                
-                self.del_sock()                
+                self.logger.error('SocketFallError, reload socket ...')
+                self.del_sock()
                 return(False, "", "")
 
             except socket.timeout as e:
@@ -303,7 +297,7 @@ class HttpClient(object):
             except OSError as e:
                 self.sock.close()
                 # logger
-                self.logger.error('OSError' + str(e.args))                
+                self.logger.error('OSError' + str(e.args))
                 self.soket_dic.pop(self.host)
                 self.del_sock()
                 return(False, "", "")
@@ -385,8 +379,9 @@ class HttpClient(object):
                 for key, value in temp_dick.items():
                     self.cook_dick[domain]["cookie"][key] = value
 
-    def soket_funk(self, url, kwargs, headers_all, url_previos, type_of_request, bytes_to_send):
-        self.nonblocking_stack = []        
+    def soket_funk(self, url, kwargs, headers_all, url_previos,
+                   type_of_request, bytes_to_send):
+        self.nonblocking_stack = []
         bound = self.boundary().encode()
         # Create request string
         CRLF = b"\r\n"
@@ -431,15 +426,14 @@ class HttpClient(object):
 
                     q += via.encode()
 
-
         if (type_of_request == "HEAD" or type_of_request == "DELETE" or
                 type_of_request == "GET"):
-            
+
             q += CRLF
             if self.nonblocking == False:
-                self.soket_req(q)            
+                self.soket_req(q)
             if self.nonblocking == True:
-                self.nonblocking_stack.append(q)                
+                self.nonblocking_stack.append(q)
                 return self.nonblocking_stack
 
         if type_of_request == "POST" or type_of_request == "PUT":
@@ -477,10 +471,10 @@ class HttpClient(object):
             q += CRLF
             if self.nonblocking == False:
                 self.soket_req(q)
-            
-            if self.nonblocking == True:                
+
+            if self.nonblocking == True:
                 self.nonblocking_stack.append(q)
-                
+
             q = b""
             # constructing message body
             # to sending files
@@ -504,12 +498,11 @@ class HttpClient(object):
                     bytes_to_send += b"Content-Transfer-Encoding: base64" + CRLF
                     #bytes_to_send += b"Content-Transfer-Encoding: binary" + CRLF
                     bytes_to_send += CRLF
-                    
-            
+
                     if self.nonblocking == True:
                         self.nonblocking_stack.append(bytes_to_send)
                         self.nonblocking_stack.append(value)
-                    
+
                     if self.nonblocking == False:
                         self.soket_req(bytes_to_send)
                         # debug
@@ -531,10 +524,11 @@ class HttpClient(object):
                                 break
                             else:
                                 is_one_iter = True
-                    
+                        value.close()
+
                     if self.nonblocking == True:
                         self.nonblocking_stack.append(CRLF)
-                    
+
                     if self.nonblocking == False:
                         self.soket_req(CRLF)
 
@@ -544,24 +538,24 @@ class HttpClient(object):
                         self.nonblocking_stack.append(last_boundary)
                     if self.nonblocking == False:
                         self.soket_req(last_boundary)
-            
+
             if "data" in kwargs:
                 payload_el = "&".join([k + "=" + v for k, v in
                                        kwargs["data"].items()])
-                #self.soket_req(payload_el.encode())
+                # self.soket_req(payload_el.encode())
                 if self.nonblocking == True:
                     self.nonblocking_stack.append(payload_el.encode())
-                    
+
                 if self.nonblocking == False:
                     self.soket_req(payload_el.encode())
 
     def soket_recv(self, byte, transfer_timeout):
         this_stack_bytes = b''
 
-        #self.sock.settimeout(transfer_timeout)
+        # self.sock.settimeout(transfer_timeout)
         response = self.sock.recv(byte)
         this_stack_bytes += response
-        #self.sock.settimeout(None)
+        # self.sock.settimeout(None)
 
         if response == b"" and self.is_f_req == False:
             # logger
@@ -576,9 +570,9 @@ class HttpClient(object):
         return (True, this_stack_bytes)
 
     def soket_req(self, q):
-        #self.sock.settimeout(self.connect_timeout)
+        # self.sock.settimeout(self.connect_timeout)
         num = self.sock.send(q)
-        #self.sock.settimeout(None)
+        # self.sock.settimeout(None)
         self.req_line += q
         str_path = os.path.join(self.file_path, "request_str.txt")
         try:
@@ -590,7 +584,7 @@ class HttpClient(object):
                 file = fp.write(q)
         finally:
             return num
-    
+
     def parslink(self, link):
         m_data_link = re.search("https?://([^/]+).*", link, re.DOTALL)
         if ":" in m_data_link.group(1):
@@ -630,73 +624,76 @@ class HttpClient(object):
         return (header, cookies_list)
 
     def content_length_nonblocking(self):
-            self.logger.info("Conent len mode")  
-            self.logger.info("len is: "+str(self.headers["Content-Length"]))           
-            page_bytes = self.data[self.start_index:]
-            if "on_headers" in self.kwargs:
-                on_headers = self.kwargs["on_headers"](self.headers)
-                if not on_headers:
+        self.logger.info("Conent len mode")
+        self.logger.info("len is: " + str(self.headers["Content-Length"]))
+        page_bytes = self.data[self.start_index:]
+        if "on_headers" in self.kwargs:
+            on_headers = self.kwargs["on_headers"](self.headers)
+            if not on_headers:
                     # logger
-                    self.logger.warning("on_headers is drop download ...")
-                    if self.encoding is not None:
-                        self.page += page_bytes.decode(self.encoding)
-                    if self.encoding is None:
-                        self.page = ""
-                    return (True, self.page)
-
-            if "on_progress" in self.kwargs:
-                on_progress(len(page_bytes), int(self.headers["Content-Length"]))
-
-            if int(self.headers["Content-Length"]) <= 0:                
+                self.logger.warning("on_headers is drop download ...")
+                if self.encoding is not None:
+                    self.page += page_bytes.decode(self.encoding)
+                if self.encoding is None:
+                    self.page = ""
                 return (True, self.page)
 
-            if int(self.headers["Content-Length"]) > 0:
-                if self.firstin == True:                
-                    if "output" in self.kwargs:
-                        with open(self.kwargs["output"], "wb") as fp:
-                            fp.write(page_bytes)
-                    self.firstin = False
-                
-                if self.max_size is not None and self.max_size < len(page_bytes):
-                    if self.encoding is None:
-                        return(True, page_bytes[0:self.max_size])
-                    else:
-                        return(True, page_bytes[0:self.max_size].decode(self.encoding))
+        if "on_progress" in self.kwargs:
+            on_progress(len(page_bytes), int(self.headers["Content-Length"]))
 
-                if len(page_bytes) < int(self.headers["Content-Length"]):
-                    response = self.sock.recv(65535)
-                    if "output" in self.kwargs:
-                        with open(self.kwargs["output"], "ab") as fp:
-                            fp.write(response)
-                    self.data += response
-                    page_bytes = self.data[self.start_index:]
-                    self.logger.info("Now is body data: "+str(len(page_bytes)))
-                    self.logger.info("content-lenght:"+str( self.headers["Content-Length"] ))
-                    
-                    
-                    if len(page_bytes) >= int(self.headers["Content-Length"]):
-                        if "output" in self.kwargs:
-                            # logger
-                            self.logger.info("Download to file is complited.")
-                        if self.encoding is not None:
-                            self.page += self.data[self.start_index:].decode(self.encoding)
-                        if self.encoding is None:
-                            self.page = ""
-                        return (True, self.page)
-                    
-                    return (False, "")
+        if int(self.headers["Content-Length"]) <= 0:
+            return (True, self.page)
+
+        if int(self.headers["Content-Length"]) > 0:
+            if self.firstin == True:
+                if "output" in self.kwargs:
+                    with open(self.kwargs["output"], "wb") as fp:
+                        fp.write(page_bytes)
+                self.firstin = False
+
+            if self.max_size is not None and self.max_size < len(page_bytes):
+                if self.encoding is None:
+                    return(True, page_bytes[0:self.max_size])
+                else:
+                    return(True, page_bytes[0:self.max_size].decode(self.encoding))
+
+            if len(page_bytes) < int(self.headers["Content-Length"]):
+                response = self.sock.recv(65535)
+                if "output" in self.kwargs:
+                    with open(self.kwargs["output"], "ab") as fp:
+                        fp.write(response)
+                self.data += response
+                page_bytes = self.data[self.start_index:]
+                self.logger.info("Now is body data: " + str(len(page_bytes)))
+                self.logger.info("content-lenght:" +
+                                 str(self.headers["Content-Length"]))
 
                 if len(page_bytes) >= int(self.headers["Content-Length"]):
                     if "output" in self.kwargs:
                         # logger
                         self.logger.info("Download to file is complited.")
                     if self.encoding is not None:
-                        self.page += self.data[self.start_index:].decode(self.encoding)
+                        self.page += self.data[
+                            self.start_index:].decode(self.encoding)
                     if self.encoding is None:
                         self.page = ""
                     return (True, self.page)
 
-    def content_length(self, page_bytes, transfer_timeout, kwargs, max_size):
+                return (False, "")
+
+            if len(page_bytes) >= int(self.headers["Content-Length"]):
+                if "output" in self.kwargs:
+                    # logger
+                    self.logger.info("Download to file is complited.")
+                if self.encoding is not None:
+                    self.page += self.data[
+                        self.start_index:].decode(self.encoding)
+                if self.encoding is None:
+                    self.page = ""
+                return (True, self.page)
+
+    def content_length(self, page_bytes,
+                       transfer_timeout, kwargs, max_size):
         page = ""
         if "on_headers" in kwargs:
             on_headers = kwargs["on_headers"](self.headers)
@@ -753,23 +750,23 @@ class HttpClient(object):
 
     def transfer_encodong_nonblocking(self):
         self.logger.info("Chunked  mode")
-        page_bytes = self.data[self.start_index:]            
-        byte_len = 100                
+        page_bytes = self.data[self.start_index:]
+        byte_len = 100
         self.logger.info("In loop")
         page_bytes = self.data[self.start_index:]
         if len(page_bytes[self.chunked_index:]) < 7:
             response = self.sock.recv(2048)
             page_bytes = self.data[self.start_index:]
             self.data += response
-            
+
         m_len = re.search(b"(\r\n)?(.+?)\r\n", page_bytes[self.chunked_index:])
         if m_len is None:
             response = self.sock.recv(2048)
             page_bytes = self.data[self.start_index:]
-            self.data += response                
+            self.data += response
             return(False, "")
 
-        self.logger.info("m-len: "+str( m_len is not None))    
+        self.logger.info("m-len: " + str(m_len is not None))
         len_len = len(m_len.group())        # len() of LEN  +\r\n
         byte_len = int(m_len.group(2), 16)
 
@@ -777,12 +774,12 @@ class HttpClient(object):
             response = self.sock.recv(byte_len)
             self.data += response
             page_bytes = self.data[self.start_index:]
-                          
+
         from_ = self.chunked_index + len_len
         to_ = self.chunked_index + len_len + byte_len
         this_page = page_bytes[from_: to_]
         self.page_str += this_page
-            
+
         # Navigates to the next iteration
         self.chunked_index += len_len + byte_len
         if "output" in self.kwargs:
@@ -802,13 +799,13 @@ class HttpClient(object):
                             part_this_page = self.max_size - file_size
                             fp.write(this_page[0:part_this_page])
                             byte_len = 0
-            
+
             if self.firstin == True:
                 if "output" in self.kwargs:
                     with open(self.kwargs["output"], "wb") as fp:
                         fp.write(page_bytes)
                 self.firstin = False
-        
+
         if byte_len == 0:
             if self.max_size is None:
                 if self.encoding is not None:
@@ -824,11 +821,12 @@ class HttpClient(object):
                 if self.encoding is None:
                     page = ''
             return (True, page)
-        
+
         if byte_len != 0:
             return (False, "")
 
-    def transfer_encodong(self, page_bytes, transfer_timeout, kwargs, max_size):
+    def transfer_encodong(self, page_bytes,
+                          transfer_timeout, kwargs, max_size):
         byte_len = 100
         start_page_index = 0
         page_str = b""
@@ -852,7 +850,7 @@ class HttpClient(object):
             m_len = re.search(b"(\r\n)?(.+?)\r\n",
                               page_bytes[start_page_index:])
 
-            if m_len is None:                
+            if m_len is None:
                 response = self.soket_recv(2048, transfer_timeout)
                 if response[0]:
                     page_bytes += response[1]
@@ -924,7 +922,6 @@ class HttpClient(object):
                     fp.write(page_bytes)
             self.firstin = False
 
-        
         if self.max_size is not None:
             if len(page_bytes) <= self.max_size:
                 return (True, page_bytes[:self.max_size].decode(self.encoding))
@@ -939,7 +936,8 @@ class HttpClient(object):
         else:
             return (False, "")
 
-    def connection_close(self, page_bytes, transfer_timeout, kwargs, max_size):
+    def connection_close(self, page_bytes,
+                         transfer_timeout, kwargs, max_size):
 
         is_stop_recursion = True
         if "Content-Type" in self.headers:
@@ -997,26 +995,24 @@ class HttpClient(object):
 
         return None
 
-    def sendnonblock(self): 
+    def sendnonblock(self):
         try:
-            #print(self.nonblocking_stack)
-            if type(self.nonblocking_stack[self.send_stack_index]) is bytes:            
-                num = self.soket_req( self.nonblocking_stack[self.send_stack_index][self.send_byte_index:] )
+            if type(self.nonblocking_stack[self.send_stack_index]) is bytes:
+                num = self.soket_req(self.nonblocking_stack[
+                                     self.send_stack_index][self.send_byte_index:])
                 self.send_byte_index += num
-                #print( len(self.nonblocking_stack[self.send_stack_index]) )
-                #print( self.send_byte_index )
                 if self.send_byte_index == len(self.nonblocking_stack[self.send_stack_index]):
                     self.send_stack_index += 1
                     self.send_byte_index = 0
-                    self.nonblocking_stack[self.send_stack_index]                    
+                    self.nonblocking_stack[self.send_stack_index]
                     return False
                 else:
                     return False
 
             elif type(self.nonblocking_stack[self.send_stack_index]) is io.TextIOWrapper:
                 try:
-                    #file_ = value.read(65536)
-                    file_ = base64.standard_b64encode(self.nonblocking_stack[self.send_stack_index].read(65535))
+                    file_ = base64.standard_b64encode(
+                        self.nonblocking_stack[self.send_stack_index].read(65535))
                     num = self.soket_req(file_)
 
                 except FileNotFoundError as e:
@@ -1025,29 +1021,29 @@ class HttpClient(object):
                     bytes_to_send = b""
                     return False
 
-                else:                        
+                else:
                     if num < 65535:
                         self.nonblocking_stack[self.send_stack_index].closed
                         self.send_stack_index += 1
-                        self.send_byte_index = 0   
+                        self.send_byte_index = 0
                         return False
         except IndexError as e:
-            self.logger.info("all data send")            
+            self.logger.info("all data send")
             return True
 
     def recvnonblock(self):
-        try:          
+        try:
             if self.isheaders == False:
                 self.data += self.sock.recv(65535)
-                self.logger.info("recv 65535")                
+                self.logger.info("recv 65535")
                 status = re.search(b"HTTP.*? (\d+) ", self.data[:16])
                 if status is None:
                     # logger
                     self.logger.error("Critical ERROR: No status code!")
                     return (False, "error")
                 self.status_code = status.group(1)
-                self.logger.info("status code: "+str(self.status_code))
-                if status is not None:                    
+                self.logger.info("status code: " + str(self.status_code))
+                if status is not None:
                     if status.group(1)[0] == "5":
                         if (self.retry_index >= retry and
                                 self.raise_on_error):
@@ -1058,7 +1054,7 @@ class HttpClient(object):
                             time.sleep(self.retry_delay)
                             self.retry_index += 1
                             return (False, "retry")
-                    
+
                     if status.group(1)[0] == "4":
                         # logger
                         self.logger.error(
@@ -1069,12 +1065,14 @@ class HttpClient(object):
                         self.history = []
                         self.headers = {}
                         return (False, "error")
-                    
+
                     if self.type_req == "DELETE" and status.group(1)[0] == "3":
                         # logger
-                        self.logger.error("You have 3-th ERROR of 3xx http response")
-                        self.logger.info("for DELETE method Enter correct informations")
-                        return (False, "error") 
+                        self.logger.error(
+                            "You have 3-th ERROR of 3xx http response")
+                        self.logger.info(
+                            "for DELETE method Enter correct informations")
+                        return (False, "error")
 
                     m_headers = re.search(b".+?\r\n\r\n", self.data, re.DOTALL)
                     if m_headers is None:
@@ -1085,7 +1083,8 @@ class HttpClient(object):
 
                     if m_headers is not None:
                         all_headers = m_headers.group().decode("ascii")
-                        headers_and_startindex = self.search_headers(all_headers)
+                        headers_and_startindex = self.search_headers(
+                            all_headers)
                         # start index of message body
                         self.start_index = m_headers.span()[1]
                         cookies_list = headers_and_startindex[1]
@@ -1107,9 +1106,8 @@ class HttpClient(object):
 
                         # cookies_list string with cookies (not parsinf).
                         self.cookies_funk(cookies_list, self.host)
-                        #print(self.headers)
+
                         if self.status_code in [b"301", b"302"]:
-                            #print("AAAAAAAAAAAAAAAAAAAA")
                             self.isconnect = False
                             self.issend = False
                             self.isrecv = False
@@ -1121,88 +1119,89 @@ class HttpClient(object):
 
                             cookies_url = self.status_200_300(
                                 self.headers["Location"], {})
-                            self.url_previos = self.url       # url for Referrer
+                            self.url_previos = self.url    # url for Referrer
                             self.url = cookies_url[1]    # URL for next step
                             # COOKIE for next step
                             self.cookies = cookies_url[0]
                             self.host = cookies_url[2]  # Host for next step
-                            #print( self.host == cookies_url[2])
-                            #self.del_sock()
                             return (False, "error")
-                        
+
                         self.isheaders = True
 
             if self.isheaders == True and self.isbody == False:
-                    if self.type_req == "HEAD":
-                        self.isbody = True                        
+                if self.type_req == "HEAD":
+                    self.isbody = True
 
-                    if not self.type_req == "HEAD":
-                        #self.response_str = this_stack_bytes[:start_index]
-                        # Content-Length
-                        if "Content-Length" in self.headers:
+                if not self.type_req == "HEAD":
+                    #self.response_str = this_stack_bytes[:start_index]
+                    # Content-Length
+                    if "Content-Length" in self.headers:
                             # logger
-                            self.logger.info("Type of download: Content-Length")
-                            response, self.body = self.content_length_nonblocking()
-                            if response:
+                        self.logger.info("Type of download: Content-Length")
+                        response, self.body = self.content_length_nonblocking()
+                        if response:
                                 # logger
-                                self.logger.info("Content Len: OK")
+                            self.logger.info("Content Len: OK")
+                            self.isbody = True
+                            return (True, "ok")
+
+                        if not response:
+                            # logger
+                            self.logger.error(
+                                "Content Len: we need more iter...")
+                            return (True, "continue")
+
+                    # Chanked
+                    if "Transfer-Encoding" in self.headers:
+                        # logger
+                        self.logger.info("Type of download: Transfer-Encoding")
+                        try:
+                            response, self.body = self.transfer_encodong_nonblocking()
+                        except BlockingIOError as e:
+                            self.logger.error("Transfer-Encoding ERROR")
+                            raise e
+
+                        except Exception as e:
+
+                            self.logger.error("WTF error")
+                            raise e
+                        else:
+                            if response:
+                                    # logger
+                                self.logger.info("Transfer-Encoding: OK")
                                 self.isbody = True
                                 return (True, "ok")
 
                             if not response:
                                 # logger
-                                self.logger.error("Content Len: we need more iter...")
+                                self.logger.error(
+                                    "Transfer-Encoding: we need more iter...")
                                 return (True, "continue")
-   
-                        # Chanked
-                        if "Transfer-Encoding" in self.headers:
+
+                    # Conection Closed
+                    if ("Transfer-Encoding" not in self.headers and
+                            "Content-Length" not in self.headers):
+                        # logger
+                        self.logger.info("Type of download: Connection_close")
+
+                        response, self.body = self.connection_close_nonblocking()
+                        if response:
                             # logger
-                            self.logger.info("Type of download: Transfer-Encoding")
-                            try:
-                                response, self.body = self.transfer_encodong_nonblocking()
-                            except BlockingIOError as e:                                
-                                self.logger.error("Transfer-Encoding ERROR")
-                                raise e
-                            
-                            except Exception as e:
+                            self.logger.info("Conection close: OK")
+                            self.isbody = True
+                            return (True, "ok")
 
-                                self.logger.error("WTF error")
-                                raise e
-                            else:
-                                if response:
-                                    # logger
-                                    self.logger.info("Transfer-Encoding: OK")
-                                    self.isbody = True
-                                    return (True, "ok")
-
-                                if not response:
-                                    # logger
-                                    self.logger.error("Transfer-Encoding: we need more iter...")
-                                    return (True, "continue")
-                        
-                        # Conection Closed
-                        if ("Transfer-Encoding" not in self.headers and "Content-Length" not in self.headers):
+                        if not response:
                             # logger
-                            self.logger.info("Type of download: Connection_close")
-                            
-                            response, self.body = self.connection_close_nonblocking()
-                            if response:
-                                # logger
-                                self.logger.info("Conection close: OK")
-                                self.isbody = True
-                                return (True, "ok")
-
-                            if not response:
-                                # logger
-                                self.logger.error("Conection close: ERROR")
-                                return (True, "continue")
+                            self.logger.error("Conection close: ERROR")
+                            return (True, "continue")
             if self.isbody == True:
                 return (True, "ok")
 
         except BlockingIOError as e:
-            self.logger.error(str(e.args))             
-            raise e   
-            return (True , "continue")
+            self.logger.error(str(e.args))
+            raise e
+            return (True, "continue")
 
         else:
             if self.isbody == True:
@@ -1214,13 +1213,8 @@ class HttpClient(object):
     # for nonblocking mode
     def isready(self):
         try:
-            print( self.url)
-            print("issend: ", self.issend)  
-            print("isconnect: ", self.isconnect)
-            print("isheaders: ", self.isheaders)
-            print("isrecv: ", self.isrecv)  
             if self.isconnect == False:
-                self.logger.info("Connect mode "+str(self.host))
+                self.logger.info("Connect mode " + str(self.host))
                 response = self.connect(
                     url=self.url,
                     kwargs=self.kwargs,
@@ -1229,56 +1223,56 @@ class HttpClient(object):
                     type_req=self.type_req,
                     bytes_to_send=self.bytes_to_send,
                     transfer_timeout=self.transfer_timeout)
-                
+
                 # Connection to socket is OK
                 if response[0]:
-                    # logger                    
+                    # logger
                     self.logger.info("Connection to socket is OK")
                     result = response[1]
                     request_str = response[2]
                     self.isconnect = True
                     self.soket_funk(self.url, self.kwargs, self.headers_all,
-                                                  self.url_previos, self.type_req, self.bytes_to_send)
-                
+                                    self.url_previos, self.type_req, self.bytes_to_send)
+
                 # Connection to socket: ERROR
                 if not response[0]:
-                    # logger                    
+                    # logger
                     self.logger.critical("Connection to socket: ERROR")
                     self.isconnect = False
-             
+
             if self.isconnect == True and self.issend == False:
-                self.logger.info("Send mode "+str(self.host))                
+                self.logger.info("Send mode " + str(self.host))
                 issend = self.sendnonblock()
-                self.logger.info("issend block: "+str(issend))       
+                self.logger.info("issend block: " + str(issend))
                 if issend == True:
                     self.issend = True
                     # parameters for recv
-                    self.isheaders = False 
+                    self.isheaders = False
                     self.isbody = False
                     self.logger.info("Issend True")
                 else:
                     self.issend = False
                     self.logger.info("Issend False")
-            
+
             if self.isconnect == True and self.issend == True:
-                self.logger.info("Recv mode  "+str(self.host))
+                self.logger.info("Recv mode  " + str(self.host))
                 isrecv, describe = self.recvnonblock()
-                self.logger.info("isrecv: "+  str(isrecv))                
-                
+                self.logger.info("isrecv: " + str(isrecv))
+
                 if isrecv == True and describe == "ok":
                     self.isrecv = True
-                    
+
                 elif isrecv == True and describe == "continue":
                     self.isrecv = False
-                    
+
                 # for heders download part
                 elif isrecv == False and describe in ["retry", "error"]:
                     self.isrecv = False
 
                 else:
                     self.logger.error("NONBLOCKING WTF Return @#$%^&?")
-                    self.logger.error("isrecv: "+  str(isrecv))
-                    self.logger.error("describe: "+ str(describe))
+                    self.logger.error("isrecv: " + str(isrecv))
+                    self.logger.error("describe: " + str(describe))
 
             if self.isrecv == True:
                 return True
@@ -1288,9 +1282,9 @@ class HttpClient(object):
             # timeout exception is setup
             if err == 'timed out':
                 sleep(1)
-                self.logger.info('recv timed out, retry later')                
+                self.logger.info('recv timed out, retry later')
                 return False
-            
+
             else:
                 self.logger.error(str(e))
                 return False
@@ -1298,7 +1292,7 @@ class HttpClient(object):
         except socket.gaierror as e:
             # wrong link
             self.logger.info(self.url)
-            self.logger.error("Gai error: "+str(e.errno))
+            self.logger.error("Gai error: " + str(e.errno))
             self.isrecv = True
             self.issend = True
             self.isconnect = True
@@ -1310,18 +1304,18 @@ class HttpClient(object):
                 self.logger.error(self.url)
                 self.logger.info("All data is here")
                 return True
-            else:                
+            else:
                 self.logger.error("Resource temporarily unavailable")
                 return False
-         
+
         else:
             if self.isrecv == True:
                 self.logger.info("isready() : Isrecv TRUE")
                 return True
             else:
                 self.logger.info("isready() : Isrecv False")
-                return False 
-    
+                return False
+
     def structure(self, url, kwargs, headers_all, url_previos, type_req,
                   bytes_to_send, transfer_timeout, redirect_counter, max_redir, max_size, retry):
         # Start structure
@@ -1347,8 +1341,8 @@ class HttpClient(object):
                 break
 
             request_str = self.soket_funk(url, kwargs, headers_all,
-                                                  url_previos, type_req,
-                                                  bytes_to_send)    
+                                          url_previos, type_req,
+                                          bytes_to_send)
 
             result = self.soket_recv(16, transfer_timeout)
             first_str = result[1].decode("ascii")
@@ -1357,6 +1351,7 @@ class HttpClient(object):
             status = re.search("HTTP.*? (\d+) ", first_str)
             if status is None:
                 # logger
+                self.logger.error(first_str)
                 self.logger.error("Critical ERROR: No status code!")
                 break
             self.status_code = status.group(1)
@@ -1593,8 +1588,8 @@ class HttpClient(object):
                 history: list of redirect history
 
         """
-        #global logger        
-        self.logger = logging.getLogger("try3")        
+        #global logger
+        self.logger = logging.getLogger("try3")
         self.logger.info("Try to connect: " + str(link))
         self.is_f_req = True
         bytes_to_send = None
@@ -1655,13 +1650,13 @@ class HttpClient(object):
 
         if "nonblocking" in kwargs:
             self.nonblocking = kwargs["nonblocking"]
-        
+
         # Take from link: Host, Cookies pattern
         link_el = self.parslink(link)
         url = link_el[0] + payload_el
         start_host = link_el[1]
         start_cook_pattern = link_el[2]
-        self.host = start_host       
+        self.host = start_host
 
         # Fiend Cookies for Request
         self.cook_dick = self.load_cookies(self.load_cookie)
@@ -1675,37 +1670,37 @@ class HttpClient(object):
 
         if self.nonblocking == True:
             class getHttpClient(HttpClient):
+
                 def __init__(self):
-                    super(getHttpClient, self).__init__()                
-            
+                    super(getHttpClient, self).__init__()
+
             children = getHttpClient()
             children.host = self.host
             children.cook_dick = self.cook_dick
             children.cookies = self.cookies
             children.url = url
 
-            children.kwargs=kwargs
-            children.headers_all=headers_all
-            children.url_previos=url_previos
-            children.type_req="GET"
-            children.bytes_to_send=bytes_to_send
-            children.transfer_timeout=transfer_timeout
-            children.redirect_counter=redirect_counter
-            children.max_redir=max_redir
-            children.max_size=max_size
-            children.retry=retry
-            children.logger=self.logger
+            children.kwargs = kwargs
+            children.headers_all = headers_all
+            children.url_previos = url_previos
+            children.type_req = "GET"
+            children.bytes_to_send = bytes_to_send
+            children.transfer_timeout = transfer_timeout
+            children.redirect_counter = redirect_counter
+            children.max_redir = max_redir
+            children.max_size = max_size
+            children.retry = retry
+            children.logger = self.logger
 
-            children.data = b""             
+            children.data = b""
             children.nonblocking = True
             children.isconnect = False
             children.issend = False
-            
-            children.isheaders = False 
+
+            children.isheaders = False
             children.isbody = False
             children.isrecv = False
             return children
-
 
         if self.nonblocking == False:
             return self.structure(
@@ -1739,10 +1734,10 @@ class HttpClient(object):
                 history: list of redirect history
 
         """
-        #global logger        
-        self.logger = logging.getLogger("try3")        
+        #global logger
+        self.logger = logging.getLogger("try3")
         self.logger.info("Try to connect: " + str(link))
-        
+
         self.is_f_req = True
         is_stop_recursion = False
         url_previos = ""
@@ -1802,11 +1797,6 @@ class HttpClient(object):
         start_host = link_el[1]
         start_cook_pattern = link_el[2]
 
-        #m_data_link = re.search("https?://(.+?\.(.+?))(/.*)", link, re.DOTALL)
-        #start_url_and_query = link
-        #start_host = m_data_link.group(1)
-        #start_cook_pattern = m_data_link.group(2)
-
         self.page_status_list = []
         self.host = start_host
         self.cookies = ""
@@ -1823,37 +1813,37 @@ class HttpClient(object):
 
         if self.nonblocking == True:
             class getHttpClient(HttpClient):
+
                 def __init__(self):
-                    super(getHttpClient, self).__init__()                
-            
+                    super(getHttpClient, self).__init__()
+
             children = getHttpClient()
             children.host = self.host
             children.cook_dick = self.cook_dick
             children.cookies = self.cookies
             children.url = url
 
-            children.kwargs=kwargs
-            children.headers_all=headers_all
-            children.url_previos=url_previos
-            children.type_req="POST"
-            children.bytes_to_send=bytes_to_send
-            children.transfer_timeout=transfer_timeout
-            children.redirect_counter=redirect_counter
-            children.max_redir=max_redir
-            children.max_size=max_size
-            children.retry=retry
-            children.logger=self.logger
+            children.kwargs = kwargs
+            children.headers_all = headers_all
+            children.url_previos = url_previos
+            children.type_req = "POST"
+            children.bytes_to_send = bytes_to_send
+            children.transfer_timeout = transfer_timeout
+            children.redirect_counter = redirect_counter
+            children.max_redir = max_redir
+            children.max_size = max_size
+            children.retry = retry
+            children.logger = self.logger
 
-            children.data = b""            
+            children.data = b""
             children.nonblocking = True
             children.isconnect = False
             children.issend = False
-            
-            children.isheaders = False 
+
+            children.isheaders = False
             children.isbody = False
             children.isrecv = False
             return children
-
 
         if self.nonblocking == False:
             return self.structure(
@@ -1868,7 +1858,7 @@ class HttpClient(object):
                 max_redir=max_redir,
                 max_size=max_size,
                 retry=retry)
-    
+
     def put(self, link, **kwargs):
         """PUT http request.
 
