@@ -1162,7 +1162,6 @@ class HttpClient(object):
                             raise e
 
                         except Exception as e:
-
                             self.logger.error("WTF error")
                             raise e
                         else:
@@ -1174,7 +1173,7 @@ class HttpClient(object):
 
                             if not response:
                                 # logger
-                                self.logger.error(
+                                self.logger.info(
                                     "Transfer-Encoding: we need more iter...")
                                 return (True, "continue")
 
@@ -1589,7 +1588,7 @@ class HttpClient(object):
 
         """
         #global logger
-        self.logger = logging.getLogger("try3")
+        self.logger = logging.getLogger(__name__)
         self.logger.info("Try to connect: " + str(link))
         self.is_f_req = True
         bytes_to_send = None
