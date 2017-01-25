@@ -491,7 +491,7 @@ class HttpClient(object):
                     # create request string
                     bytes_to_send += boundary + CRLF
                     bytes_to_send += (b"Content-Disposition: " +
-                                      "form-data; name=" +
+                                      b"form-data; name=" +
                                       lap +
                                       key.encode() + lap + b"; filename=" +
                                       lap +
