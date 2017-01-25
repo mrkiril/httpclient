@@ -29,6 +29,7 @@ class SocketFallError(Exception):
 
 
 class HttpClient(object):
+
     """ Main class of this library.
         It contain GET, POST, PUT, DELETE, HEAD methods.
 
@@ -144,7 +145,7 @@ class HttpClient(object):
 
             "www.bing.com": "204.79.197.200",
             "www.google.com.ua": "173.194.113.215",
-            "search.yahoo.com": "188.125.66.104",
+            "search.yahoo.com": "217.12.15.96",
             "go.mail.ru": "217.69.139.53",
             "www.sputnik.ru": "5.143.224.19"
         }
@@ -229,7 +230,8 @@ class HttpClient(object):
                     is_proxy_exist = False
                     soket_key = None
                     for key, elem in self.soket_dic.items():
-                        if self.proxy[0] == str(elem["socket"].getpeername()[0]):
+                        if self.proxy[0] == str(
+                                elem["socket"].getpeername()[0]):
                             is_proxy_exist = True
                             self.sock = elem["socket"]
                             soket_key = key
@@ -488,14 +490,18 @@ class HttpClient(object):
                     mime = mimetypes.guess_type(value.name, strict=False)
                     # create request string
                     bytes_to_send += boundary + CRLF
-                    bytes_to_send += (b"Content-Disposition: form-data; name=" +
-                                      lap + key.encode() + lap + b"; filename=" +
-                                      lap + os.path.basename(value.name).encode() +
+                    bytes_to_send += (b"Content-Disposition: " +
+                                      "form-data; name=" +
+                                      lap +
+                                      key.encode() + lap + b"; filename=" +
+                                      lap +
+                                      os.path.basename(value.name).encode() +
                                       lap + CRLF)
 
                     bytes_to_send += b"Content-Type: " + \
                         mime[0].encode() + CRLF
-                    bytes_to_send += b"Content-Transfer-Encoding: base64" + CRLF
+                    bytes_to_send += b"Content-Transfer-Encoding: base64" + \
+                        CRLF
                     #bytes_to_send += b"Content-Transfer-Encoding: binary" + CRLF
                     bytes_to_send += CRLF
 
@@ -655,7 +661,8 @@ class HttpClient(object):
                 if self.encoding is None:
                     return(True, page_bytes[0:self.max_size])
                 else:
-                    return(True, page_bytes[0:self.max_size].decode(self.encoding))
+                    return(True,
+                           page_bytes[0:self.max_size].decode(self.encoding))
 
             if len(page_bytes) < int(self.headers["Content-Length"]):
                 response = self.sock.recv(65535)
@@ -998,10 +1005,12 @@ class HttpClient(object):
     def sendnonblock(self):
         try:
             if type(self.nonblocking_stack[self.send_stack_index]) is bytes:
-                num = self.soket_req(self.nonblocking_stack[
-                                     self.send_stack_index][self.send_byte_index:])
+                num = self.soket_req(
+                    self.nonblocking_stack[
+                        self.send_stack_index][self.send_byte_index:])
                 self.send_byte_index += num
-                if self.send_byte_index == len(self.nonblocking_stack[self.send_stack_index]):
+                if self.send_byte_index == len(
+                        self.nonblocking_stack[self.send_stack_index]):
                     self.send_stack_index += 1
                     self.send_byte_index = 0
                     self.nonblocking_stack[self.send_stack_index]
@@ -1009,10 +1018,12 @@ class HttpClient(object):
                 else:
                     return False
 
-            elif type(self.nonblocking_stack[self.send_stack_index]) is io.TextIOWrapper:
+            elif (type(self.nonblocking_stack[self.send_stack_index])
+                  is io.TextIOWrapper):
                 try:
                     file_ = base64.standard_b64encode(
-                        self.nonblocking_stack[self.send_stack_index].read(65535))
+                        self.nonblocking_stack[self.send_stack_index].read(
+                            65535))
                     num = self.soket_req(file_)
 
                 except FileNotFoundError as e:
@@ -1099,9 +1110,11 @@ class HttpClient(object):
 
                             if charset is not None:
                                 self.encoding = charset.group(1)
-                            elif self.headers["Content-Type"].find("text") != -1:
+                            elif self.headers["Content-Type"].find(
+                                    "text") != -1:
                                 self.encoding = "utf-8"
-                            elif self.headers["Content-Type"].find("json") != -1:
+                            elif self.headers["Content-Type"].find(
+                                    "json") != -1:
                                 self.encoding = "utf-8"
 
                         # cookies_list string with cookies (not parsinf).
@@ -1156,7 +1169,8 @@ class HttpClient(object):
                         # logger
                         self.logger.info("Type of download: Transfer-Encoding")
                         try:
-                            response, self.body = self.transfer_encodong_nonblocking()
+                            answer = self.transfer_encodong_nonblocking()
+                            response, self.body = answer
                         except BlockingIOError as e:
                             self.logger.error("Transfer-Encoding ERROR")
                             raise e
@@ -1183,7 +1197,8 @@ class HttpClient(object):
                         # logger
                         self.logger.info("Type of download: Connection_close")
 
-                        response, self.body = self.connection_close_nonblocking()
+                        answer = self.connection_close_nonblocking()
+                        response, self.body = answer
                         if response:
                             # logger
                             self.logger.info("Conection close: OK")
@@ -1231,7 +1246,8 @@ class HttpClient(object):
                     request_str = response[2]
                     self.isconnect = True
                     self.soket_funk(self.url, self.kwargs, self.headers_all,
-                                    self.url_previos, self.type_req, self.bytes_to_send)
+                                    self.url_previos, self.type_req,
+                                    self.bytes_to_send)
 
                 # Connection to socket: ERROR
                 if not response[0]:
@@ -1316,7 +1332,8 @@ class HttpClient(object):
                 return False
 
     def structure(self, url, kwargs, headers_all, url_previos, type_req,
-                  bytes_to_send, transfer_timeout, redirect_counter, max_redir, max_size, retry):
+                  bytes_to_send, transfer_timeout, redirect_counter,
+                  max_redir, max_size, retry):
         # Start structure
         is_stop_recursion = False
         while not is_stop_recursion:
