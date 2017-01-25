@@ -34,13 +34,16 @@ class Test_urllib(unittest.TestCase):
             save_cookie='cookie.txt',   # save cookie to file after query
             connect_timeout=10,         # socket timeout on connect
             transfer_timeout=30,        # socket timeout on send/recv
-            max_redirects=10,           # follow Location: header on 3xx response
-            set_referer=True,           # set Referer: header when follow location
+            # follow Location: header on 3xx response
+            max_redirects=10,
+            # set Referer: header when follow location
+            set_referer=True,
             keep_alive=3,               # Keep-alive socket up to N requests
             headers=my_headers,         # send custom headers
             http_version="1.1",         # use custom http/version
             auth=my_user_pass,          # http auth
-            retry=5,                    # try again on socket or http/5xx errors
+            # try again on socket or http/5xx errors
+            retry=5,
             retry_delay=10)             # wait betweet tries
 
     def tearDown(self):
@@ -50,38 +53,45 @@ class Test_urllib(unittest.TestCase):
 
         res = self.client.get('http://www.google.com/intl/uk/about/',
                               referrer='http://www.google.com/',
-                              output=os.path.join(self.file_path, "socket_page.html"))
+                              output=os.path.join(self.file_path,
+                                                  "socket_page.html"))
         # перевірка на успішність запиту
         self.assertEqual(res.status_code, "200")
         # перевірка на наявність тега <html>
         self.assertRegex(res.body, "<html")
         self.assertRegex(res.body, "</html>")
 
-        lists = ["Barak Obama", "Vladimir Putin", "fransua cluzet", "Alan Rickman",
+        lists = ["Barak Obama", "Vladimir Putin",
+                 "fransua cluzet", "Alan Rickman",
                  "Taylor Momsen", "kurt cobain", "johnny depp"]
 
         for i in lists:
             res = self.client.get('http://www.google.com.ua/search?',
                                   params={'q': i, 'start': '10'},
-                                  output=os.path.join(self.file_path, "socket_page.html"))
+                                  output=os.path.join(self.file_path,
+                                                      "socket_page.html"))
             # перевірка на успішність запиту
             self.assertEqual(res.status_code, "200")
             # перевірка на наявність тега <html>
             self.assertRegex(res.body, "<html")
             self.assertRegex(res.body, "</html>")
 
-        res = self.client.get('http://zakon5.rada.gov.ua/laws/show/254%D0%BA/96-%D0%B2%D1%80/print1453311319237518',
+        res = self.client.get('http://zakon5.rada.gov.ua/laws/show/254%D0%BA/'
+                              '96-%D0%B2%D1%80/print1453311319237518',
                               max_size=150000,
-                              output=os.path.join(self.file_path, "socket_page.html"))
+                              output=os.path.join(self.file_path,
+                                                  "socket_page.html"))
         # перевірка на успішність запиту
         self.assertEqual(res.status_code, "200")
         # перевірка на наявність тега <html>
         self.assertRegex(res.body, "<html>")
         self.assertRegex(res.body, "</html>")
 
-        res = self.client.get('http://zakon5.rada.gov.ua/laws/show/254%D0%BA/96-%D0%B2%D1%80/print1453311319237518',
+        res = self.client.get('http://zakon5.rada.gov.ua/laws/show/254%D0%BA/'
+                              '96-%D0%B2%D1%80/print1453311319237518',
                               max_size=50000,
-                              output=os.path.join(self.file_path, "socket_page.html"))
+                              output=os.path.join(self.file_path,
+                                                  "socket_page.html"))
         # перевірка на успішність запиту
         self.assertEqual(res.status_code, "200")
         # перевірка на наявність тега <html>
@@ -92,14 +102,17 @@ class Test_urllib(unittest.TestCase):
     def test_post(self):
         res = self.client.post('http://451f.tk/kiril.kuchelny/',
                                data={'k1': 'value', 'k2': 'eulav'},
-                               output=os.path.join(self.file_path, "socket_page.html"))
+                               output=os.path.join(self.file_path,
+                                                   "socket_page.html"))
         # перевірка на успішність запиту
         self.assertEqual(res.status_code, "200")
         self.assertRegex(res.body, "eulav")
         self.assertRegex(res.body, "value")
 
-        res = self.client.get('http://i.ytimg.com/vi/7AFUch5JZaQ/maxresdefault.jpg',
-                              output=os.path.join(self.file_path, "minion.jpg"))
+        res = self.client.get(
+            'http://i.ytimg.com/vi/7AFUch5JZaQ/maxresdefault.jpg',
+            output=os.path.join(self.file_path,
+                                "minion.jpg"))
         # перевірка на успішність запиту
         self.assertEqual(res.status_code, "200")
 
@@ -107,7 +120,8 @@ class Test_urllib(unittest.TestCase):
                                files={'f1': open(os.path.join(
                                    self.file_path, "minion.jpg"), 'rb')},
                                auth=None,
-                               output=os.path.join(self.file_path, "socket_page.html"))
+                               output=os.path.join(self.file_path,
+                                                   "socket_page.html"))
 
         # перевірка на успішність запиту
         with open(os.path.join(self.file_path, "minion.jpg"), 'rb') as fp:
@@ -123,7 +137,8 @@ class Test_urllib(unittest.TestCase):
         res = self.client.delete('http://451f.tk/kiril.kuchelny/?123',
                                  retry=0,
                                  raise_on_error=True,
-                                 output=os.path.join(self.file_path, "socket_page.html"))
+                                 output=os.path.join(self.file_path,
+                                                     "socket_page.html"))
         # перевірка на успішність запиту
         self.assertEqual(res.status_code, "200")
 
