@@ -1,6 +1,5 @@
-import sys
-import datetime
-import time
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 import re
 import socket
 import base64
@@ -10,13 +9,9 @@ import os.path
 import logging
 import random
 import string
-import math
-import hashlib
 import errno
 import os
-import os.path
 import io
-import traceback
 
 
 class SocketFallError(Exception):
@@ -208,22 +203,19 @@ class HttpClient(object):
                     if self.ipfromhost(self.host) is None:
                         addr = (self.host, 80)
 
-                    #self.logger.info( str(self.host))
                     if ":" in self.host:
                         n_host = self.host.split(":")
                         addr = (n_host[0], int(n_host[1]))
 
                     self.sock.settimeout(self.connect_timeout)
                     self.sock.connect(addr)
-                    #self.logger.info( str(self.sock))
-                    if self.nonblocking == True:
+                    if self.nonblocking:
                         self.sock.settimeout(0)
-                    if self.nonblocking == False:
+                    if not self.nonblocking:
                         self.sock.settimeout(None)
 
                     self.soket_dic[self.host] = {
                         "socket": self.sock, "index": 0}
-                    #result = self.soket_recv(16, transfer_timeout)
                     self.is_f_req = False
 
                 if self.proxy is not None:
@@ -264,7 +256,6 @@ class HttpClient(object):
 
                         self.sock = self.soket_dic[soket_key]["socket"]
                         self.soket_dic[soket_key]["index"] += 1
-                        #result = self.soket_recv(16, transfer_timeout)
                         self.is_f_req = False
 
             except ConnectionError as e:
@@ -432,9 +423,9 @@ class HttpClient(object):
                 type_of_request == "GET"):
 
             q += CRLF
-            if self.nonblocking == False:
+            if not self.nonblocking:
                 self.soket_req(q)
-            if self.nonblocking == True:
+            if self.nonblocking:
                 self.nonblocking_stack.append(q)
                 return self.nonblocking_stack
 
@@ -471,10 +462,10 @@ class HttpClient(object):
                 q += b"Content-Length: " + byte_len.encode() + CRLF
 
             q += CRLF
-            if self.nonblocking == False:
+            if not self.nonblocking:
                 self.soket_req(q)
 
-            if self.nonblocking == True:
+            if self.nonblocking:
                 self.nonblocking_stack.append(q)
 
             q = b""
@@ -502,20 +493,17 @@ class HttpClient(object):
                         mime[0].encode() + CRLF
                     bytes_to_send += b"Content-Transfer-Encoding: base64" + \
                         CRLF
-                    #bytes_to_send += b"Content-Transfer-Encoding: binary" + CRLF
                     bytes_to_send += CRLF
-
-                    if self.nonblocking == True:
+                    if self.nonblocking:
                         self.nonblocking_stack.append(bytes_to_send)
                         self.nonblocking_stack.append(value)
 
-                    if self.nonblocking == False:
+                    if not self.nonblocking:
                         self.soket_req(bytes_to_send)
                         # debug
                         iterator = True
                         while iterator:
                             try:
-                                #file_ = value.read(65536)
                                 file_ = base64.standard_b64encode(
                                     value.read(65535))
                                 self.soket_req(file_)
@@ -532,42 +520,38 @@ class HttpClient(object):
                                 is_one_iter = True
                         value.close()
 
-                    if self.nonblocking == True:
+                    if self.nonblocking:
                         self.nonblocking_stack.append(CRLF)
 
-                    if self.nonblocking == False:
+                    if not self.nonblocking:
                         self.soket_req(CRLF)
 
                 if is_one_iter:
                     last_boundary = boundary + b"--" + CRLF
-                    if self.nonblocking == True:
+                    if self.nonblocking:
                         self.nonblocking_stack.append(last_boundary)
-                    if self.nonblocking == False:
+                    if not self.nonblocking:
                         self.soket_req(last_boundary)
 
             if "data" in kwargs:
                 payload_el = "&".join([k + "=" + v for k, v in
                                        kwargs["data"].items()])
                 # self.soket_req(payload_el.encode())
-                if self.nonblocking == True:
+                if self.nonblocking:
                     self.nonblocking_stack.append(payload_el.encode())
 
-                if self.nonblocking == False:
+                if not self.nonblocking:
                     self.soket_req(payload_el.encode())
 
     def soket_recv(self, byte, transfer_timeout):
         this_stack_bytes = b''
-
-        # self.sock.settimeout(transfer_timeout)
         response = self.sock.recv(byte)
         this_stack_bytes += response
-        # self.sock.settimeout(None)
-
-        if response == b"" and self.is_f_req == False:
+        if response == b"" and not self.is_f_req:
             # logger
             self.logger.warning("Socket return Zero")
             return (False, this_stack_bytes)
-        if response == b"" and self.is_f_req == True:
+        if response == b"" and self.is_f_req:
             # logger
             self.logger.warning("Socket is fall down")
             raise SocketFallError("Socket is fall down")
@@ -576,9 +560,7 @@ class HttpClient(object):
         return (True, this_stack_bytes)
 
     def soket_req(self, q):
-        # self.sock.settimeout(self.connect_timeout)
         num = self.sock.send(q)
-        # self.sock.settimeout(None)
         self.req_line += q
         str_path = os.path.join(self.file_path, "request_str.txt")
         try:
@@ -807,7 +789,7 @@ class HttpClient(object):
                             fp.write(this_page[0:part_this_page])
                             byte_len = 0
 
-            if self.firstin == True:
+            if self.firstin:
                 if "output" in self.kwargs:
                     with open(self.kwargs["output"], "wb") as fp:
                         fp.write(page_bytes)
@@ -1044,7 +1026,7 @@ class HttpClient(object):
 
     def recvnonblock(self):
         try:
-            if self.isheaders == False:
+            if not self.isheaders:
                 self.data += self.sock.recv(65535)
                 self.logger.info("recv 65535")
                 status = re.search(b"HTTP.*? (\d+) ", self.data[:16])
@@ -1141,12 +1123,11 @@ class HttpClient(object):
 
                         self.isheaders = True
 
-            if self.isheaders == True and self.isbody == False:
+            if self.isheaders and not self.isbody:
                 if self.type_req == "HEAD":
                     self.isbody = True
 
                 if not self.type_req == "HEAD":
-                    #self.response_str = this_stack_bytes[:start_index]
                     # Content-Length
                     if "Content-Length" in self.headers:
                             # logger
@@ -1180,7 +1161,7 @@ class HttpClient(object):
                             raise e
                         else:
                             if response:
-                                    # logger
+                                # logger
                                 self.logger.info("Transfer-Encoding: OK")
                                 self.isbody = True
                                 return (True, "ok")
@@ -1209,7 +1190,7 @@ class HttpClient(object):
                             # logger
                             self.logger.error("Conection close: ERROR")
                             return (True, "continue")
-            if self.isbody == True:
+            if self.isbody:
                 return (True, "ok")
 
         except BlockingIOError as e:
@@ -1218,7 +1199,7 @@ class HttpClient(object):
             return (True, "continue")
 
         else:
-            if self.isbody == True:
+            if self.isbody:
                 return (True, "ok")
             else:
                 self.logger.info("continue ...")
@@ -1227,7 +1208,7 @@ class HttpClient(object):
     # for nonblocking mode
     def isready(self):
         try:
-            if self.isconnect == False:
+            if not self.isconnect:
                 self.logger.info("Connect mode " + str(self.host))
                 response = self.connect(
                     url=self.url,
@@ -1255,11 +1236,11 @@ class HttpClient(object):
                     self.logger.critical("Connection to socket: ERROR")
                     self.isconnect = False
 
-            if self.isconnect == True and self.issend == False:
+            if self.isconnect and not self.issend:
                 self.logger.info("Send mode " + str(self.host))
                 issend = self.sendnonblock()
                 self.logger.info("issend block: " + str(issend))
-                if issend == True:
+                if issend:
                     self.issend = True
                     # parameters for recv
                     self.isheaders = False
@@ -1269,19 +1250,19 @@ class HttpClient(object):
                     self.issend = False
                     self.logger.info("Issend False")
 
-            if self.isconnect == True and self.issend == True:
+            if self.isconnect and self.issend:
                 self.logger.info("Recv mode  " + str(self.host))
                 isrecv, describe = self.recvnonblock()
                 self.logger.info("isrecv: " + str(isrecv))
 
-                if isrecv == True and describe == "ok":
+                if isrecv and describe == "ok":
                     self.isrecv = True
 
-                elif isrecv == True and describe == "continue":
+                elif isrecv and describe == "continue":
                     self.isrecv = False
 
                 # for heders download part
-                elif isrecv == False and describe in ["retry", "error"]:
+                elif not isrecv and describe in ["retry", "error"]:
                     self.isrecv = False
 
                 else:
@@ -1289,7 +1270,7 @@ class HttpClient(object):
                     self.logger.error("isrecv: " + str(isrecv))
                     self.logger.error("describe: " + str(describe))
 
-            if self.isrecv == True:
+            if self.isrecv:
                 return True
         except socket.timeout as e:
             err = e.args[0]
@@ -1315,7 +1296,7 @@ class HttpClient(object):
 
         except BlockingIOError as e:
             # [Errno 11] Resource temporarily unavailable
-            if self.isrecv == True:
+            if self.isrecv:
                 self.logger.error(self.url)
                 self.logger.info("All data is here")
                 return True
@@ -1324,7 +1305,7 @@ class HttpClient(object):
                 return False
 
         else:
-            if self.isrecv == True:
+            if self.isrecv:
                 self.logger.info("isready() : Isrecv TRUE")
                 return True
             else:
@@ -1342,7 +1323,6 @@ class HttpClient(object):
             self.encoding = ""
             self.body = ""
 
-            # def connect( request_str ):
             response = self.connect(url, kwargs, headers_all, url_previos,
                                     type_req, bytes_to_send, transfer_timeout)
             if response[0]:
@@ -1560,9 +1540,7 @@ class HttpClient(object):
                 if self.headers["Connection"].lower() == "close":
                     self.del_sock()
 
-            # self.soket_dic[Host] = { "soket": sock, "index" : index}
             # Delete and Close Soсket if index >
-
             for k, v in self.soket_dic.items():
                 if v["index"] > self.keep_alive:
                     v['socket'].close()
@@ -1718,7 +1696,7 @@ class HttpClient(object):
             children.isrecv = False
             return children
 
-        if self.nonblocking == False:
+        if not self.nonblocking:
             return self.structure(
                 url=url,
                 kwargs=kwargs,
@@ -1827,7 +1805,7 @@ class HttpClient(object):
             link=link,
             start_cook_pattern=start_cook_pattern)
 
-        if self.nonblocking == True:
+        if self.nonblocking:
             class getHttpClient(HttpClient):
 
                 def __init__(self):
@@ -1861,7 +1839,7 @@ class HttpClient(object):
             children.isrecv = False
             return children
 
-        if self.nonblocking == False:
+        if not self.nonblocking:
             return self.structure(
                 url=url,
                 kwargs=kwargs,

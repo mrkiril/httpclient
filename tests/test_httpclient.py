@@ -1,22 +1,8 @@
-import sys
-import datetime
-import time
-import re
-import socket
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 import base64
-import json
-import mimetypes
 import os.path
-import logging
-import random
-import string
-import math
 import hashlib
-
-
-sys.path.append(os.path.abspath(os.path.join(
-    os.path.abspath(os.path.dirname(__file__)), os.pardir)))
-
 from httpclient import HttpClient
 import unittest
 
@@ -25,10 +11,8 @@ class Test_urllib(unittest.TestCase):
 
     def setUp(self):
         self.file_path = os.path.abspath(os.path.dirname(__file__))
-
         my_headers = [('User-Agent', 'Mozilla/4.0'), ('X-From', 'UA')]
         my_user_pass = ('kiril', 'supersecret')
-
         self.client = HttpClient(
             load_cookie='cookie.txt',   # load cookie from file before query
             save_cookie='cookie.txt',   # save cookie to file after query
@@ -50,7 +34,6 @@ class Test_urllib(unittest.TestCase):
         pass
 
     def test_get(self):
-
         res = self.client.get('http://www.google.com/intl/uk/about/',
                               referrer='http://www.google.com/',
                               output=os.path.join(self.file_path,
