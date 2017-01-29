@@ -37,7 +37,7 @@ class HttpClient(object):
             set_referer: set Referer: header when follow location
             keep_alive: Keep-alive socket up to N requests
 
-            And logger of library can call'd like self.logger 
+            And logger of library can call'd like self.logger
     """
 
     def __init__(self, **kwargs):
@@ -237,23 +237,14 @@ class HttpClient(object):
                         self.sock.settimeout(self.connect_timeout)
                         self.sock.connect(addr)
                         self.sock.settimeout(0)
-                        # request_str = self.soket_funk(url, kwargs, headers_all,
-                        #                              url_previos, type_req,
-                        #                              bytes_to_send)
-
                         self.soket_dic[self.proxy[0]] = (
                             {"socket": self.sock, "index": 0})
-                        #result = self.soket_recv(16, transfer_timeout)
                         self.is_f_req = False
                         self.logger.info('Proxy socket is create')
 
                     if is_proxy_exist:
                         # logger
                         self.logger.info('Proxy socket exist')
-                        # request_str = self.soket_funk(url, kwargs, headers_all,
-                        #                              url_previos, type_req,
-                        #                              bytes_to_send)
-
                         self.sock = self.soket_dic[soket_key]["socket"]
                         self.soket_dic[soket_key]["index"] += 1
                         self.is_f_req = False
@@ -633,7 +624,7 @@ class HttpClient(object):
             return (True, self.page)
 
         if int(self.headers["Content-Length"]) > 0:
-            if self.firstin == True:
+            if self.firstin:
                 if "output" in self.kwargs:
                     with open(self.kwargs["output"], "wb") as fp:
                         fp.write(page_bytes)
@@ -772,7 +763,7 @@ class HttpClient(object):
         # Navigates to the next iteration
         self.chunked_index += len_len + byte_len
         if "output" in self.kwargs:
-            if self.firstin == False:
+            if not self.firstin:
                 if self.max_size is None:
                     with open(self.kwargs["output"], "ab") as fp:
                         fp.write(this_page)
@@ -900,12 +891,12 @@ class HttpClient(object):
         response = self.sock.recv(65535)
         self.data += response
         page_bytes = self.data[self.start_index:]
-        if self.firstin == False:
+        if not self.firstin:
             if "output" in self.kwargs:
                 with open(self.kwargs["output"], "ab") as fp:
                     fp.write(response)
 
-        if self.firstin == True:
+        if self.firstin:
             if "output" in self.kwargs:
                 with open(self.kwargs["output"], "wb") as fp:
                     fp.write(page_bytes)
@@ -1576,13 +1567,13 @@ class HttpClient(object):
 
            Returns:
                 status code: HTTP code of the request
-                encoding: Represents a character encoding.  
-                headers: Dickt of reaponse headers 
-                body: message body 
+                encoding: Represents a character encoding.
+                headers: Dickt of reaponse headers
+                body: message body
                 history: list of redirect history
 
         """
-        #global logger
+        # global logger
         self.logger = logging.getLogger(__name__)
         self.logger.info("Try to connect: " + str(link))
         self.is_f_req = True
@@ -1662,7 +1653,7 @@ class HttpClient(object):
             link=link,
             start_cook_pattern=start_cook_pattern)
 
-        if self.nonblocking == True:
+        if self.nonblocking:
             class getHttpClient(HttpClient):
 
                 def __init__(self):
@@ -1722,13 +1713,12 @@ class HttpClient(object):
 
            Returns:
                 status code: HTTP code of the request
-                encoding: Represents a character encoding.  
-                headers: Dickt of reaponse headers 
-                body: message body 
+                encoding: Represents a character encoding.
+                headers: Dickt of reaponse headers
+                body: message body
                 history: list of redirect history
-
         """
-        #global logger
+        # global logger
         self.logger = logging.getLogger("try3")
         self.logger.info("Try to connect: " + str(link))
 
@@ -1865,11 +1855,10 @@ class HttpClient(object):
 
            Returns:
                 status code: HTTP code of the request
-                encoding: Represents a character encoding.  
-                headers: Dickt of reaponse headers 
-                body: message body 
+                encoding: Represents a character encoding.
+                headers: Dickt of reaponse headers
+                body: message body
                 history: list of redirect history
-
         """
         self.logger.info("Try to connect: " + str(link))
         self.is_f_req = True
@@ -1967,11 +1956,10 @@ class HttpClient(object):
 
            Returns:
                 status code: HTTP code of the request
-                encoding: Represents a character encoding.  
-                headers: Dickt of reaponse headers 
-                body: message body 
+                encoding: Represents a character encoding.
+                headers: Dickt of reaponse headers
+                body: message body
                 history: list of redirect history
-
         """
         self.logger.info("Try to connect: " + str(link))
         self.is_f_req = True
@@ -2076,7 +2064,7 @@ class HttpClient(object):
 
            Returns:
                 status code: HTTP code of the request
-                encoding: Represents a character encoding.  
+                encoding: Represents a character encoding.
                 headers: Dickt of reaponse headers
                 history: list of redirect history
 
