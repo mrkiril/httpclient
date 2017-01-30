@@ -12,7 +12,7 @@ import string
 import errno
 import os
 import io
-
+from time import sleep
 
 class SocketFallError(Exception):
 
