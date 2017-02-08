@@ -104,7 +104,7 @@ class Test_urllib(unittest.TestCase):
             print("try to kill ", self.pid, " but Exception")
             print(e.args)
 
-    def test_test(self):        
+    def test_test(self):
         print("GET")
         # звичайтий запит перевірка статус кода
         # запис до файла
@@ -135,7 +135,9 @@ class Test_urllib(unittest.TestCase):
         # перевірка роботи max_size
         # якщо max_size більше ніж розмір сторінки
         #
-        res = self.client.get('http://lurkmore.to/%D0%9F%D0%B5%D1%80%D0%B2%D0%B0%D1%8F_%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D1%8F_%D0%B2%D0%BE%D0%B9%D0%BD%D0%B0',
+        res = self.client.get('http://lurkmore.to/%D0%9F%D0%B5%D1%80%D0%B2'
+                              '%D0%B0%D1%8F_%D0%BC%D0%B8%D1%80%D0%BE%D0%B2'
+                              '%D0%B0%D1%8F_%D0%B2%D0%BE%D0%B9%D0%BD%D0%B0',
                               max_size=1500000,
                               output=os.path.join(self.file_path,
                                                   "socket_page.html"))
@@ -146,7 +148,9 @@ class Test_urllib(unittest.TestCase):
         # обмеження скачування через параметр max_size
         # з урахуванням того що розмір сторінки більше ніж max_size
         #
-        res = self.client.get('http://lurkmore.to/%D0%9F%D0%B5%D1%80%D0%B2%D0%B0%D1%8F_%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D1%8F_%D0%B2%D0%BE%D0%B9%D0%BD%D0%B0',
+        res = self.client.get('http://lurkmore.to/%D0%9F%D0%B5%D1%80%D0%B2'
+                              '%D0%B0%D1%8F_%D0%BC%D0%B8%D1%80%D0%BE%D0%B2'
+                              '%D0%B0%D1%8F_%D0%B2%D0%BE%D0%B9%D0%BD%D0%B0',
                               max_size=150000,
                               output=os.path.join(self.file_path,
                                                   "socket_page.html"))
@@ -211,7 +215,8 @@ class Test_urllib(unittest.TestCase):
         def on_progress(i, all_len):
             sys.stdout.write('\r')
             sys.stdout.write("[%-20s] %d%%" %
-                             ('=' * round(20 * i / all_len), 100 * i / all_len))
+                             ('=' * round(20 * i / all_len),
+                              100 * i / all_len))
             sys.stdout.flush()
         res = self.client.get(
             'http://i.ytimg.com/vi/7AFUch5JZaQ/maxresdefault.jpg',
@@ -282,7 +287,6 @@ class Test_urllib(unittest.TestCase):
         self.assertNotRegex(data, "Username: kiril")
         self.assertNotRegex(data, "Password: supersecret")
 
-        
         # перевірка відправки данних
         # виставлення кукі та хедерів разом з аутентифікацією
         # та наявність хісторі
@@ -298,7 +302,7 @@ class Test_urllib(unittest.TestCase):
         self.assertRegex(res.body, "Username: user")
         self.assertRegex(res.body, "Password: ololo")
         self.assertIsNotNone(res.history)
-        
+
         # перевірка відправки данних
         # та виставлення реферерера
         # з хісторі боді
@@ -336,7 +340,6 @@ class Test_urllib(unittest.TestCase):
                 os.path.join(
                     self.file_path, "socket_page.html")), 400)
 
-        
         # timeout  POST
         #
         #
@@ -771,8 +774,7 @@ class Test_urllib(unittest.TestCase):
                                 files={'f1': open(os.path.join(
                                     self.file_path, "minion.jpg"), 'rb')},
                                 nonblocking=True)
-        arr_obj = [res1, res2]
-        #arr_obj = [res1]
+        arr_obj = [res1, res2]        
         global_start_time = time.time()
         while True:
             arr_status = [ob.isready() for ob in arr_obj]

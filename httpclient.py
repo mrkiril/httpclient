@@ -582,15 +582,15 @@ class HttpClient(object):
         self.sock.settimeout(None)
         this_stack_bytes += response
         if response == b"" and not self.is_f_req:
-            # logger            
-            self.logger.warn("Socket return Zero")
+            # logger
+            self.logger.warning("Socket return Zero")
             return (False, this_stack_bytes)
         if response == b"" and self.is_f_req:
             # logger
-            self.logger.warn("Socket is fall down")
+            self.logger.warning("Socket is fall down")
             raise SocketFallError("Socket is fall down")
             return (False, this_stack_bytes)
-        self.is_f_req = False   
+        self.is_f_req = False
         return (True, this_stack_bytes)
 
     def soket_req(self, q):
@@ -1442,7 +1442,7 @@ class HttpClient(object):
                     # logger
                     self.logger.error(first_str)
                     self.logger.error("Critical ERROR: No status code!")
-                    
+
                 self.status_code = status.group(1)
 
                 if status is not None:
@@ -1460,6 +1460,7 @@ class HttpClient(object):
                             return self
 
                     if status.group(1)[0] == "4":
+                        self.del_sock()
                         # logger
                         self.logger.error(
                             "You have 4-th ERROR of 4xx http response")
@@ -1663,12 +1664,12 @@ class HttpClient(object):
                 if redirect_counter >= max_redir:
                     return self
                     break
-        
+
             except SocketFallError as e:
                     # logger
                     self.logger.error('SocketFallError, reload socket ...')
                     self.del_sock()
-                    continue              
+                    continue
 
             except ConnectionError as e:
                 # logger
@@ -1714,8 +1715,6 @@ class HttpClient(object):
 
         """
         # global logger
-        #self.logger = logging.getLogger(__name__)
-        #self.logger = logging.getLogger("root")
         self.logger.info("Try to connect: " + str(link))
         self.is_f_req = True
         bytes_to_send = None
