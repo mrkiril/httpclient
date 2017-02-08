@@ -583,11 +583,11 @@ class HttpClient(object):
         this_stack_bytes += response
         if response == b"" and not self.is_f_req:
             # logger            
-            self.logger.warning("Socket return Zero")
+            self.logger.warn("Socket return Zero")
             return (False, this_stack_bytes)
         if response == b"" and self.is_f_req:
             # logger
-            self.logger.warning("Socket is fall down")
+            self.logger.warn("Socket is fall down")
             raise SocketFallError("Socket is fall down")
             return (False, this_stack_bytes)
         self.is_f_req = False   
@@ -653,7 +653,7 @@ class HttpClient(object):
             on_headers = self.kwargs["on_headers"](self.headers)
             if not on_headers:
                     # logger
-                self.logger.warning("on_headers is drop download ...")
+                self.logger.info("on_headers is drop download ...")
                 if self.encoding is not None:
                     self.page += page_bytes.decode(self.encoding)
                 if self.encoding is None:
@@ -731,7 +731,7 @@ class HttpClient(object):
             on_headers = kwargs["on_headers"](self.headers)
             if not on_headers:
                 # logger
-                self.logger.warning("on_headers is drop download ...")
+                self.logger.info("on_headers is drop download ...")
                 return (False, page)
 
         if "on_progress" in kwargs:
@@ -1018,7 +1018,7 @@ class HttpClient(object):
                     file = fp.read()
             except FileNotFoundError as e:
                 # logger
-                self.logger.warning("Coockie's file not found")
+                self.logger.info("Coockie's file not found")
                 return {}
             else:
                 return json.loads(file)
@@ -1235,7 +1235,7 @@ class HttpClient(object):
 
                         if not response:
                             # logger
-                            self.logger.error(
+                            self.logger.info(
                                 "Content Len: we need more iter...")
                             return (True, "continue")
 
@@ -1247,12 +1247,9 @@ class HttpClient(object):
                             answer = self.transfer_encodong_nonblocking()
                             response, self.body = answer
                         except BlockingIOError as e:
-                            self.logger.error("Transfer-Encoding ERROR")
+                            self.logger.info("Transfer-Encoding ERROR")
                             raise e
 
-                        except Exception as e:
-                            self.logger.error("WTF error")
-                            raise e
                         else:
                             if response:
                                 # logger
@@ -1282,13 +1279,13 @@ class HttpClient(object):
 
                         if not response:
                             # logger
-                            self.logger.error("Conection close: ERROR")
+                            self.logger.info("Conection close: ERROR")
                             return (True, "continue")
             if self.isbody:
                 return (True, "ok")
 
         except BlockingIOError as e:
-            self.logger.error(str(e.args))
+            self.logger.info(str(e.args))
             raise e
             return (True, "continue")
 
@@ -1391,11 +1388,11 @@ class HttpClient(object):
         except BlockingIOError as e:
             # [Errno 11] Resource temporarily unavailable
             if self.isrecv:
-                self.logger.error(self.url)
+                self.logger.info(self.url)
                 self.logger.info("All data is here")
                 return True
             else:
-                self.logger.error("Resource temporarily unavailable")
+                self.logger.info("Resource temporarily unavailable")
                 return False
 
         else:
