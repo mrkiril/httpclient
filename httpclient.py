@@ -310,7 +310,10 @@ class HttpClient(object):
 
             except socket.timeout as e:
                 self.sock.close()
-                self.soket_dic.pop(self.host)
+                try:
+                    self.soket_dic.pop(self.host)
+                except KeyError as e:
+                    pass    
                 # logger
                 self.logger.error('TimeoutError' + str(e.args))
                 return (False, "")
