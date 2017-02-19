@@ -137,7 +137,7 @@ class HttpClient(object):
         self.page_str = b""  # for chunked module nonblocking
 
     def __del__(self):
-        # self.soket_dic[Host] = { "socket": sock, "index" : index}
+        # self.soket_dic[Host] = { "socket": sock, "index" : index, "key": key}
         for k, v in self.soket_dic.items():
             v["socket"].close()
 
@@ -193,10 +193,9 @@ class HttpClient(object):
 
     def del_sock(self):
         # delete and close this socket
-        lasthost = self.sock.getpeername()
         key = None
         for k, v in self.soket_dic.items():
-            if v["socket"].getpeername() == lasthost:
+            if v["socket"] == self.sock:
                 key = k
                 break
         if key is not None:
@@ -216,13 +215,12 @@ class HttpClient(object):
                     try:
                         # if error means socket close from another side
                         # and raise OSError
-                        self.sock.getpeername()
                         self.logger.info('socket exist')
                         self.sock = self.soket_dic[self.host]["socket"]
                         self.soket_dic[self.host]["index"] += 1
                         self.is_f_req = True
                     except OSError as e:
-                        self.logger.info('last socket close frol those side')
+                        self.logger.info('last socket close from those side')
                         self.soket_dic.pop(self.host)
 
                 if self.host not in self.soket_dic and self.proxy is None:
@@ -1731,7 +1729,6 @@ class HttpClient(object):
 
             except ConnectionError as e:
                 # logger
-                print(self.sock)
                 self.logger.error('ConnectionError: ' + str(e.args))
                 self.del_sock()
                 return self
@@ -1774,6 +1771,7 @@ class HttpClient(object):
 
         """
         # global logger
+        # self.logger = logging.getLogger(__file__)
         self.logger.info("Try to connect: " + str(link))
         self.is_f_req = True
         bytes_to_send = None
