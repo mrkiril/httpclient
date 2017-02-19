@@ -31,7 +31,7 @@ class Test_urllib(unittest.TestCase):
         my_user_pass = ('kiril', 'supersecret')
         self.client = HttpClient(
             connect_timeout=10,         # socket timeout on connect
-            transfer_timeout=2,        # socket timeout on send/recv
+            transfer_timeout=3,        # socket timeout on send/recv
             max_redirects=10,
             set_referer=True,
             keep_alive=3,               # Keep-alive socket up to N requests
@@ -56,7 +56,7 @@ class Test_urllib(unittest.TestCase):
         self.pid = self.p.pid
         sleep(2)
         config = configparser.ConfigParser()
-        config.read(os.path.join("setting", "setting.ini"))
+        config.read(os.path.join(os.getcwd(), "setting", "setting.ini"))
         self.ip = config['DEFAULT']["ip"]
         self.port = config['DEFAULT']["port"]
         self.sock = self.ip + ":" + self.port
@@ -218,6 +218,8 @@ class Test_urllib(unittest.TestCase):
                              ('=' * round(20 * i / all_len),
                               100 * i / all_len))
             sys.stdout.flush()
+            return True
+
         res = self.client.get(
             'http://i.ytimg.com/vi/7AFUch5JZaQ/maxresdefault.jpg',
             output=os.path.join(self.file_path, "minion.jpg"),
@@ -269,6 +271,8 @@ class Test_urllib(unittest.TestCase):
                                auth=None,
                                output=os.path.join(self.file_path,
                                                    "socket_page.html"))
+
+        # print(res.body)
 
         with open(os.path.join(self.file_path, "minion.jpg"), 'rb') as fp:
             file_ = base64.standard_b64encode(fp.read())
@@ -382,6 +386,8 @@ class Test_urllib(unittest.TestCase):
         res = self.client.head('http://451f.tk/kiril.kuchelny/')
         self.assertEqual(res.status_code, "200")
 
+        start_time = time.time()
+        print(start_time)
         # Неблокуючий режим для GET
         # З кукі, та хедерами
         # та набором параметрів
@@ -419,6 +425,8 @@ class Test_urllib(unittest.TestCase):
             self.assertRegex(res.body, '"key=value"')
             self.assertRegex(res.body, '"X-From": "UAUA"')
             self.assertEqual(res.status_code, "200")
+
+        print(time.time() - start_time)
 
         # Неблокуючий режим для GET
         # таймаут відправки данних
@@ -774,7 +782,7 @@ class Test_urllib(unittest.TestCase):
                                 files={'f1': open(os.path.join(
                                     self.file_path, "minion.jpg"), 'rb')},
                                 nonblocking=True)
-        arr_obj = [res1, res2]        
+        arr_obj = [res1, res2]
         global_start_time = time.time()
         while True:
             arr_status = [ob.isready() for ob in arr_obj]
