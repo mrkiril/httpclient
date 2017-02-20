@@ -15,7 +15,6 @@ import io
 import sys
 import time
 import configparser
-from time import sleep
 
 
 class SocketFallError(Exception):
@@ -510,7 +509,6 @@ class HttpClient(object):
                                 file_ = base64.standard_b64encode(
                                     value.read(65535))
                                 if file_ == b"":
-                                    iterator = False
                                     break
                                 self.soket_send(file_)
 
@@ -679,7 +677,7 @@ class HttpClient(object):
             on_headers = kwargs["on_headers"](self.headers)
             if not on_headers:
                 self.logger.info("on_headers is drop download ...")
-                return (False, page)
+                return (False, page_bytes)
 
         if "on_progress" in kwargs:
             on_progress = kwargs["on_progress"]
@@ -809,7 +807,6 @@ class HttpClient(object):
         page_str = b""
         page_bytes += self.soket_recv(2048, transfer_timeout)[1]
         pattern = re.search(b"(\w+?)\r\n", page_bytes).group(1)
-        content_pattern = None
 
         if "output" in kwargs:
             with open(kwargs["output"], "wb") as fp:
@@ -1025,7 +1022,6 @@ class HttpClient(object):
                 except FileNotFoundError as e:
                     # logger
                     self.logger.error("Send file exception: File not found")
-                    bytes_to_send = b""
                     return False
 
                 else:
@@ -1081,7 +1077,7 @@ class HttpClient(object):
                                 "You have 5-th ERROR of 5xx http response")
                             return (True, "ok")
 
-                        sleep(self.retry_delay)
+                        time.sleep(self.retry_delay)
                         self.retry_index += 1
                         if (self.retry_index >= self.retry):
                             return (True, "ok")
@@ -1128,13 +1124,6 @@ class HttpClient(object):
 
                             if charset is not None:
                                 self.encoding = charset.group(1)
-                            elif self.headers["Content-Type"].find(
-                                    "text") != -1:
-                                self.encoding = "utf-8"
-                            elif self.headers["Content-Type"].find(
-                                    "json") != -1:
-                                self.encoding = "utf-8"
-
                         # cookies_list string with cookies (not parsing).
                         self.cookies_parsing_funk(cookies_list, self.host)
                         if self.status_code in ["301", "302"]:
@@ -1314,7 +1303,7 @@ class HttpClient(object):
         except socket.timeout as e:
             err = e.args[0]
             if err == 'timed out':
-                sleep(0.02)
+                time.sleep(0.02)
                 self.logger.info('recv timed out, retry later')
                 return False
 
@@ -1392,7 +1381,7 @@ class HttpClient(object):
                             self.logger.error(
                                 "You have 5-th ERROR of 5xx http response")
                             return self
-                        sleep(self.retry_delay)
+                        time.sleep(self.retry_delay)
                         self.retry_index += 1
                         if (self.retry_index >= retry):
                             return self
@@ -1449,12 +1438,6 @@ class HttpClient(object):
 
                             if charset is not None:
                                 self.encoding = charset.group(1)
-                            elif self.headers["Content-Type"
-                                              ].find("text") != -1:
-                                self.encoding = "utf-8"
-                            elif self.headers["Content-Type"
-                                              ].find("json") != -1:
-                                self.encoding = "utf-8"
 
                         # cookies_list string with cookies (not parsinf).
                         self.cookies_parsing_funk(cookies_list, self.host)

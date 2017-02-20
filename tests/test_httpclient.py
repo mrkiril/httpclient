@@ -8,7 +8,6 @@ import subprocess
 import multiprocessing
 from httpclient import HttpClient
 import unittest
-from time import sleep
 import logging
 import logging.config
 import sys
@@ -47,62 +46,8 @@ class Test_urllib(unittest.TestCase):
         dictionary = self.client.configure_from_file(
             os.path.join(self.file_path, "setting.ini"))
 
-        os.chdir("../../../../..")
-        self.children = multiprocessing.Value('i', 0)
-        self.p = multiprocessing.Process(target=self.process,
-                                         args=(self.children, ),
-                                         daemon=True)
-        self.p.start()
-        self.pid = self.p.pid
-        sleep(2)
-        config = configparser.ConfigParser()
-        config.read(os.path.join(os.getcwd(), "setting", "setting.ini"))
-        self.ip = config['DEFAULT']["ip"]
-        self.port = config['DEFAULT']["port"]
-        self.sock = self.ip + ":" + self.port
-        os.chdir(self.file_path)
-
-    def process(self, child_pid):
-        children = subprocess.Popen(["python3", "search_serv.py"],
-                                    shell=False)
-        child_pid.value = children.pid
-
-    def setting_sys(self, path):
-        config = configparser.ConfigParser()
-        config.read(path)
-        if "SETTINGS" in config:
-            dict1 = {}
-            options = config.options("SETTINGS")
-            for option in options:
-                try:
-                    dict1[option] = config.get("SETTINGS", option)
-                    if dict1[option] == -1:
-                        DebugPrint("skip: %s" % option)
-                except:
-                    print("exception on %s!" % option)
-                    dict1[option] = None
-            return dict1
-
     def tearDown(self):
-        print("tearDown")
-        print("slave >> " + str(self.pid))
-        print("head  >> " + str(os.getpid()))
-        print("child >> " + str(self.children.value))
-
-        os.kill(self.children.value, signal.SIGINT)
-        print("IS_ALIVE >> ", self.p.is_alive())
-        self.p.terminate()
-
-        try:
-            os.kill(self.children.value, signal.SIGINT)
-        except Exception as e:
-            print("try to kill child", self.children.value, " but Exception")
-            print(e.args)
-        try:
-            os.kill(self.pid, signal.SIGINT)
-        except Exception as e:
-            print("try to kill ", self.pid, " but Exception")
-            print(e.args)
+        pass
 
     def test_test(self):
         print("GET")
@@ -241,19 +186,19 @@ class Test_urllib(unittest.TestCase):
         # перевірка таймауту
         # екземпляр класа None
         # ібо нічого не прийшло
-        res = self.client.get('http://' + self.sock + "/test_timeout")
+        res = self.client.get("http://httpbin.org/delay/5")
         self.assertIsNotNone(res)
         self.assertEqual(res.status_code, "")
 
         # переврка виставлення обмежження повтору запитів
         # при 5хх помилках
         # на виклика помилки
-        res = self.client.get('http://' + self.sock + "/test_505",
+        res = self.client.get("http://httpbin.org/status/505",
                               retry=1,
                               raise_on_error=True)
         self.assertEqual(res.status_code, "505")
 
-        res = self.client.get('http://' + self.sock + "/test_505", retry=1)
+        res = self.client.get("http://httpbin.org/status/505", retry=1)
         self.assertEqual(res.status_code, "505")
         self.assertEqual(res.retry_index, 1)
 
@@ -283,8 +228,6 @@ class Test_urllib(unittest.TestCase):
                                auth=None,
                                output=os.path.join(self.file_path,
                                                    "socket_page.html"))
-
-        # print(res.body)
 
         with open(os.path.join(self.file_path, "minion.jpg"), 'rb') as fp:
             file_ = base64.standard_b64encode(fp.read())
@@ -332,15 +275,6 @@ class Test_urllib(unittest.TestCase):
         self.assertRegex(res.body, b'"Referrer": "http://httpbin.org/"')
         self.assertIsNotNone(res.history)
 
-        # обмеження кількості редіректів
-        #
-        res = self.client.post('http://' + self.sock + "/test_301",
-                               data={'k1': 'value', 'k2': 'eulav'},
-                               max_redirects=1)
-        self.assertEqual(res.status_code, "301")
-        self.assertEqual(res.redirect_counter, 1)
-        self.assertEqual(res.headers["Location"], "http://google.com.ua")
-
         # max_size for POST
         # перевірна на файлі
         # а також на розмірі месседж боді екземпляра класа
@@ -356,24 +290,16 @@ class Test_urllib(unittest.TestCase):
                 os.path.join(
                     self.file_path, "socket_page.html")), 400)
 
-        # timeout  POST
-        #
-        #
-        res = self.client.post('http://' + self.sock + "/test_timeout",
-                               data={'k1': 'value', 'k2': 'eulav'})
-        self.assertEqual(res.status_code, "")
-        self.assertEqual(res.body, b"")
-
         # переврка виставлення обмежження повтору запитів
         # при 5хх помилках
         # на виклика помилки
-        res = self.client.post('http://' + self.sock + "/test_505",
+        res = self.client.post("http://httpbin.org/status/505",
                                data={'k1': 'value', 'k2': 'eulav'},
                                retry=1,
                                raise_on_error=True)
         self.assertEqual(res.status_code, "505")
 
-        res = self.client.post('http://' + self.sock + "/test_505",
+        res = self.client.post("http://httpbin.org/status/505",
                                data={'k1': 'value', 'k2': 'eulav'},
                                retry=1)
 
@@ -398,8 +324,6 @@ class Test_urllib(unittest.TestCase):
         res = self.client.head('http://451f.tk/kiril.kuchelny/')
         self.assertEqual(res.status_code, "200")
 
-        start_time = time.time()
-        print(start_time)
         # Неблокуючий режим для GET
         # З кукі, та хедерами
         # та набором параметрів
@@ -419,7 +343,7 @@ class Test_urllib(unittest.TestCase):
         while True:
             arr_status = [ob.isready() for ob in arr_obj]
             if False in arr_status:
-                sleep(0.05)
+                time.sleep(0.05)
                 if time.time() - global_start_time > 3.5:
                     break
                 if time.time() - global_start_time > 0.9:
@@ -437,8 +361,6 @@ class Test_urllib(unittest.TestCase):
             self.assertRegex(res.body, b'"key=value"')
             self.assertRegex(res.body, b'"X-From": "UAUA"')
             self.assertEqual(res.status_code, "200")
-
-        print(time.time() - start_time)
 
         # Неблокуючий режим для GET
         # таймаут відправки данних
@@ -458,7 +380,7 @@ class Test_urllib(unittest.TestCase):
         while True:
             arr_status = [ob.isready() for ob in arr_obj]
             if False in arr_status:
-                sleep(0.05)
+                time.sleep(0.05)
                 if time.time() - global_start_time > 3.5:
                     break
                 if time.time() - global_start_time > 0.9:
@@ -495,7 +417,7 @@ class Test_urllib(unittest.TestCase):
         while True:
             arr_status = [ob.isready() for ob in arr_obj]
             if False in arr_status:
-                sleep(0.05)
+                time.sleep(0.05)
                 if time.time() - global_start_time > 3.5:
                     break
                 if time.time() - global_start_time > 0.9:
@@ -537,7 +459,7 @@ class Test_urllib(unittest.TestCase):
         while True:
             arr_status = [ob.isready() for ob in arr_obj]
             if False in arr_status:
-                sleep(0.05)
+                time.sleep(0.05)
                 if time.time() - global_start_time > 3.5:
                     break
                 if time.time() - global_start_time > 0.9:
@@ -551,7 +473,7 @@ class Test_urllib(unittest.TestCase):
                 break
 
         for i in range(len(arr_obj)):
-            data = json.loads(arr_obj[i].body.decode(arr_obj[i].encoding))
+            data = json.loads(arr_obj[i].body.decode())
             self.assertEqual(arr_obj[i].status_code, "200")
             self.assertEqual(data["args"]["qwerty"], "12345")
 
@@ -569,7 +491,7 @@ class Test_urllib(unittest.TestCase):
         while True:
             arr_status = [ob.isready() for ob in arr_obj]
             if False in arr_status:
-                sleep(0.05)
+                time.sleep(0.05)
                 if time.time() - global_start_time > 3.5:
                     break
                 if time.time() - global_start_time > 0.9:
@@ -600,7 +522,7 @@ class Test_urllib(unittest.TestCase):
         while True:
             arr_status = [ob.isready() for ob in arr_obj]
             if False in arr_status:
-                sleep(0.05)
+                time.sleep(0.05)
                 if time.time() - global_start_time > 3.5:
                     break
                 if time.time() - global_start_time > 0.9:
@@ -636,7 +558,7 @@ class Test_urllib(unittest.TestCase):
         while True:
             arr_status = [ob.isready() for ob in arr_obj]
             if False in arr_status:
-                sleep(0.05)
+                time.sleep(0.05)
                 if time.time() - global_start_time > 3.5:
                     break
                 if time.time() - global_start_time > 0.9:
@@ -673,7 +595,7 @@ class Test_urllib(unittest.TestCase):
         while True:
             arr_status = [ob.isready() for ob in arr_obj]
             if False in arr_status:
-                sleep(0.05)
+                time.sleep(0.05)
                 if time.time() - global_start_time > 3.5:
                     break
                 if time.time() - global_start_time > 0.9:
@@ -705,7 +627,7 @@ class Test_urllib(unittest.TestCase):
         while True:
             arr_status = [ob.isready() for ob in arr_obj]
             if False in arr_status:
-                sleep(0.05)
+                time.sleep(0.05)
                 if time.time() - global_start_time > 3.5:
                     break
                 if time.time() - global_start_time > 0.9:
@@ -719,7 +641,6 @@ class Test_urllib(unittest.TestCase):
                 break
 
         for i in range(len(arr_obj)):
-            # data = json.loads(arr_obj[i].body)
             self.assertEqual(arr_obj[i].status_code, "200")
 
         # ********** POST *********
@@ -749,7 +670,7 @@ class Test_urllib(unittest.TestCase):
         while True:
             arr_status = [ob.isready() for ob in arr_obj]
             if False in arr_status:
-                sleep(0.05)
+                time.sleep(0.05)
                 if time.time() - global_start_time > 3.5:
                     break
                 if time.time() - global_start_time > 0.9:
@@ -763,7 +684,7 @@ class Test_urllib(unittest.TestCase):
                 break
 
         for i in range(len(arr_obj)):
-            data = json.loads(arr_obj[i].body.decode(arr_obj[i].encoding))
+            data = json.loads(arr_obj[i].body.decode())
             self.assertEqual(arr_obj[i].status_code, "200")
             self.assertEqual(data["form"]["k1"], "value")
             self.assertEqual(data["form"]["k2"], "eulav")
@@ -799,7 +720,7 @@ class Test_urllib(unittest.TestCase):
         while True:
             arr_status = [ob.isready() for ob in arr_obj]
             if False in arr_status:
-                sleep(0.05)
+                time.sleep(0.05)
                 if time.time() - global_start_time > 15.5:
                     break
                 if time.time() - global_start_time > 0.9:
@@ -825,49 +746,14 @@ class Test_urllib(unittest.TestCase):
             self.assertRegex(arr_obj[i].body, b"Username: user")
             self.assertRegex(arr_obj[i].body, b"Password: ololo")
 
-        # перевірка обмеження кількості редіректів
-        #
-        #
-        res1 = self.client.post("http://" + self.sock + "/test_301",
-                                data={'k1': 'value', 'k2': 'eulav'},
-                                max_redirects=1,
-                                nonblocking=True)
-        res2 = self.client.post("http://" + self.sock + "/test_301",
-                                data={'k1': 'value', 'k2': 'eulav'},
-                                max_redirects=1,
-                                nonblocking=True)
-        arr_obj = [res1, res2]
-        global_start_time = time.time()
-        while True:
-            arr_status = [ob.isready() for ob in arr_obj]
-            if False in arr_status:
-                sleep(0.05)
-                if time.time() - global_start_time > 3.5:
-                    break
-                if time.time() - global_start_time > 0.9:
-                    count = arr_status.count(True)
-                    if count / len(arr_status) > 0.6:
-                        break
-                    else:
-                        continue
-                continue
-            else:
-                break
-
-        for i in range(len(arr_obj)):
-            self.assertEqual(arr_obj[i].status_code, "301")
-            self.assertEqual(arr_obj[i].redirect_counter, 1)
-            self.assertEqual(arr_obj[i].headers[
-                             "Location"], "http://google.com.ua")
-
         # Обмеження кількості повторних запитів
         # при 5хх помилках сервера
         #
-        res1 = self.client.post('http://' + self.sock + "/test_505",
+        res1 = self.client.post("http://httpbin.org/status/505",
                                 data={'k1': 'value', 'k2': 'eulav'},
                                 retry=1,
                                 nonblocking=True)
-        res2 = self.client.post('http://' + self.sock + "/test_505",
+        res2 = self.client.post("http://httpbin.org/status/505",
                                 data={'k1': 'value', 'k2': 'eulav'},
                                 retry=1,
                                 nonblocking=True)
@@ -876,7 +762,7 @@ class Test_urllib(unittest.TestCase):
         while True:
             arr_status = [ob.isready() for ob in arr_obj]
             if False in arr_status:
-                sleep(0.05)
+                time.sleep(0.05)
                 if time.time() - global_start_time > 3.5:
                     break
                 if time.time() - global_start_time > 0.9:
@@ -892,39 +778,6 @@ class Test_urllib(unittest.TestCase):
         for i in range(len(arr_obj)):
             self.assertEqual(arr_obj[i].status_code, "505")
             self.assertEqual(arr_obj[i].retry_index, 1)
-
-        # Обмеження кількості повторних запитів
-        # при 5хх помилках сервера
-        #
-        res1 = self.client.post('http://' + self.sock + "/test_timeout",
-                                data={'k1': 'value', 'k2': 'eulav'},
-                                retry=1,
-                                nonblocking=True)
-        res2 = self.client.post('http://' + self.sock + "/test_timeout",
-                                data={'k1': 'value', 'k2': 'eulav'},
-                                retry=1,
-                                nonblocking=True)
-        arr_obj = [res1, res2]
-        global_start_time = time.time()
-        while True:
-            arr_status = [ob.isready() for ob in arr_obj]
-            if False in arr_status:
-                sleep(0.05)
-                if time.time() - global_start_time > 3.5:
-                    break
-                if time.time() - global_start_time > 0.9:
-                    count = arr_status.count(True)
-                    if count / len(arr_status) > 0.6:
-                        break
-                    else:
-                        continue
-                continue
-            else:
-                break
-
-        for i in range(len(arr_obj)):
-            self.assertEqual(arr_obj[i].status_code, "")
-            self.assertEqual(arr_obj[i].body, b"")
 
 
 if __name__ == '__main__':
