@@ -1189,34 +1189,34 @@ class HttpClient(object):
                             raise e
 
                         else:
-                            if response:                                
+                            if response:
                                 self.logger.info("Transfer-Encoding: OK")
                                 self.isbody = True
                                 return (True, "ok")
 
-                            if not response:                                
+                            if not response:
                                 self.logger.info(
                                     "Transfer-Encoding: we need more iter...")
                                 return (True, "continue")
-                    
+
                     if ("Transfer-Encoding" not in self.headers and
                             "Content-Length" not in self.headers):
                         self.logger.info("Type of download: Connection_close")
 
                         answer = self.connection_close_nonblocking()
                         response, self.body = answer
-                        if response:                            
+                        if response:
                             self.logger.info("Conection close: OK")
                             self.isbody = True
                             return (True, "ok")
 
-                        if not response:                            
+                        if not response:
                             self.logger.info("Conection close: ERROR")
                             return (True, "continue")
             if self.isbody:
                 return (True, "ok")
 
-        except BlockingIOError as e:           
+        except BlockingIOError as e:
             raise e
             return (True, "continue")
 
@@ -1232,7 +1232,7 @@ class HttpClient(object):
         For nonblocking mode
         need to check the status of preparedness request
         """
-        try:            
+        try:
             if not self.isgetipfromhost and not self.isrecv:
                 if ":" in self.host:
                     n_host = self.host.split(":")
@@ -1243,10 +1243,10 @@ class HttpClient(object):
                     self.logger.info("Take ip from host  " + str(self.host))
                     ip = None
                     ip = socket.gethostbyname(str(self.host))
-                    if ip:                        
+                    if ip:
                         self.host_ip_dic[str(self.host)] = ip
                         self.isgetipfromhost = True
-                    else:                        
+                    else:
                         self.logger.critical("Connection to socket: ERROR")
                         self.isgetipfromhost = False
                 else:
@@ -1266,7 +1266,7 @@ class HttpClient(object):
                     transfer_timeout=self.transfer_timeout)
 
                 # Connection to socket is OK
-                if response[0]:                    
+                if response[0]:
                     self.logger.info("Connection to socket is OK")
                     result = response[1]
                     request_str = response[2]
@@ -1276,7 +1276,7 @@ class HttpClient(object):
                                     self.bytes_to_send)
 
                 # Connection to socket: ERROR
-                if not response[0]:                    
+                if not response[0]:
                     self.logger.critical("Connection to socket: ERROR")
                     self.isconnect = False
 
@@ -1312,7 +1312,7 @@ class HttpClient(object):
             if self.isrecv:
                 return True
         except socket.timeout as e:
-            err = e.args[0]            
+            err = e.args[0]
             if err == 'timed out':
                 sleep(0.02)
                 self.logger.info('recv timed out, retry later')
@@ -1381,7 +1381,7 @@ class HttpClient(object):
                 status = re.search("HTTP.*? (\d+) .*?", first_str)
                 if status is None:
                     self.logger.error(first_str)
-                    print(+self.soket_recv(300, transfer_timeout) )
+                    print(+self.soket_recv(300, transfer_timeout))
                     self.logger.error("Critical ERROR: No status code!")
                     break
                 self.status_code = status.group(1)
@@ -1417,13 +1417,13 @@ class HttpClient(object):
                                 "for DELETE method Enter correct informations")
                             break
 
-                        this_stack_bytes = result[1]                        
+                        this_stack_bytes = result[1]
                         while True:
                             response = self.soket_recv(4096, transfer_timeout)
                             if response[0]:
                                 this_stack_bytes += response[1]
 
-                            if not response[0]:                                
+                            if not response[0]:
                                 self.logger.error(
                                     "ERROR: First 4096 byte error")
                                 break
@@ -1520,7 +1520,7 @@ class HttpClient(object):
                         # and correlate it to link transition.
                         # And extracts the cookie for this domain.
                         # In case nothing matches pond
-                        if status.group(1) == "200":                            
+                        if status.group(1) == "200":
                             self.logger.info("Status code: 200")
                             self.logger.info("GO TO >>>>>>>>>>> EXIT")
 
@@ -1619,7 +1619,7 @@ class HttpClient(object):
                 body: message body
                 history: list of redirect history
 
-        """        
+        """
         self.logger.info("Try to connect: " + str(link))
         self.is_f_req = True
         bytes_to_send = None
@@ -1686,7 +1686,6 @@ class HttpClient(object):
         url = link_el[0] + payload_el
         self.host = link_el[1]
         start_cook_pattern = link_el[2]
-        
 
         # Fiend Cookies for Request
         self.cook_dick = self.load_cookies(self.load_cookie)
@@ -1774,9 +1773,9 @@ class HttpClient(object):
         redirect_counter = 0
         self.retry_index = 0
         self.raise_on_error = False
-        self.cook_dick = self.load_cookies(self.load_cookie)        
+        self.cook_dick = self.load_cookies(self.load_cookie)
         headers_all = dict(self.headers_for_request)
-        bytes_to_send = None        
+        bytes_to_send = None
 
         if "headers" in kwargs:
             headers_all.update(kwargs["headers"])
@@ -1824,7 +1823,6 @@ class HttpClient(object):
         self.host = link_el[1]
         start_cook_pattern = link_el[2]
 
-        
         # Fiend Cookies for Request
         self.cook_dick = self.load_cookies(self.load_cookie)
         cook_arr = {}
@@ -1912,10 +1910,10 @@ class HttpClient(object):
         redirect_counter = 0
         self.retry_index = 0
         self.raise_on_error = False
-        self.cook_dick = self.load_cookies(self.load_cookie)        
+        self.cook_dick = self.load_cookies(self.load_cookie)
         headers_all = dict(self.headers_for_request)
         bytes_to_send = None
-        CRLF = b"\r\n"        
+        CRLF = b"\r\n"
         if "headers" in kwargs:
             headers_all.update(kwargs["headers"])
 
@@ -2193,7 +2191,7 @@ class HttpClient(object):
         redirect_counter = 0
         self.retry_index = 0
         self.raise_on_error = False
-        self.cook_dick = self.load_cookies(self.load_cookie)        
+        self.cook_dick = self.load_cookies(self.load_cookie)
         headers_all = dict(self.headers_for_request)
         payload_el = ""
         if "params" in kwargs:
