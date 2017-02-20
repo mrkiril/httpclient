@@ -115,22 +115,20 @@ class Test_urllib(unittest.TestCase):
                                                   "socket_page.html"))
 
         self.assertEqual(res.status_code, "200")
-        self.assertRegex(res.body, "<html")
-        self.assertRegex(res.body, "</html>")
+        self.assertRegex(res.body, b"<html")
+        self.assertRegex(res.body, b"</html>")
 
         lists = ["Barak+Obama", "Vladimir+Putin",
                  "fransua+cluzet", "Alan+Rickman",
                  "Taylor+Momsen", "kurt+cobain", "johnny+depp"]
 
         for i in lists:
-            res = self.client.get('http://www.google.com.ua/search?',
+            res = self.client.get('http://httpbin.org/get',
                                   params={'q': i, 'start': '10'},
                                   output=os.path.join(self.file_path,
                                                       "socket_page.html"))
 
             self.assertEqual(res.status_code, "200")
-            self.assertRegex(res.body, "<html")
-            self.assertRegex(res.body, "</html>")
 
         # перевірка роботи max_size
         # якщо max_size більше ніж розмір сторінки
@@ -143,7 +141,7 @@ class Test_urllib(unittest.TestCase):
                                                   "socket_page.html"))
 
         self.assertEqual(res.status_code, "200")
-        self.assertRegex(res.body, "</html>")
+        self.assertRegex(res.body, b"</html>")
 
         # обмеження скачування через параметр max_size
         # з урахуванням того що розмір сторінки більше ніж max_size
@@ -156,7 +154,7 @@ class Test_urllib(unittest.TestCase):
                                                   "socket_page.html"))
 
         self.assertEqual(res.status_code, "200")
-        self.assertRegex(res.body, "html")
+        self.assertRegex(res.body, b"html")
         self.assertEqual(
             os.path.getsize(
                 os.path.join(
@@ -169,10 +167,10 @@ class Test_urllib(unittest.TestCase):
                               cookie={"key": "value"},
                               headers={"X-From": "UAUA"})
 
-        self.assertRegex(res.body, "COOKIE: key=value")
-        self.assertRegex(res.body, "X_FROM: UAUA")
-        self.assertRegex(res.body, "Username: kiril")
-        self.assertRegex(res.body, "Password: supersecret")
+        self.assertRegex(res.body, b"COOKIE: key=value")
+        self.assertRegex(res.body, b"X_FROM: UAUA")
+        self.assertRegex(res.body, b"Username: kiril")
+        self.assertRegex(res.body, b"Password: supersecret")
 
         # кукі, хедери, аутентифікація
         # та історія переходів
@@ -183,10 +181,10 @@ class Test_urllib(unittest.TestCase):
                               auth=("user", "ololo"),
                               history_body=True)
 
-        self.assertRegex(res.body, "COOKIE: key=value")
-        self.assertRegex(res.body, "X_FROM: UAUA")
-        self.assertRegex(res.body, "Username: user")
-        self.assertRegex(res.body, "Password: ololo")
+        self.assertRegex(res.body, b"COOKIE: key=value")
+        self.assertRegex(res.body, b"X_FROM: UAUA")
+        self.assertRegex(res.body, b"Username: user")
+        self.assertRegex(res.body, b"Password: ololo")
         self.assertIsNotNone(res.history)
 
         # проксі
@@ -200,7 +198,7 @@ class Test_urllib(unittest.TestCase):
                                                   "socket_page.html"))
 
         self.assertEqual(res.status_code, "200")
-        self.assertRegex(res.body, "lalala=ololo")
+        self.assertRegex(res.body, b"lalala=ololo")
 
         # перевірка обмеження редіректів
         # через редірект з головного дзеркала на сайт
@@ -208,6 +206,20 @@ class Test_urllib(unittest.TestCase):
         res = self.client.get('http://www.lurkmore.to/',
                               max_redirects=1)
         self.assertEqual(res.status_code, "301")
+
+        # перевірка роботи on_progress
+        # on_progress обмежує скачування
+        #
+        def on_progress(i, all_len):
+            if i > 300:
+                return False
+
+        res = self.client.get('http://lurkmore.to/%D0%9F%D0%B5%D1%80%D0%B2'
+                              '%D0%B0%D1%8F_%D0%BC%D0%B8%D1%80%D0%BE%D0%B2'
+                              '%D0%B0%D1%8F_%D0%B2%D0%BE%D0%B9%D0%BD%D0%B0',
+                              on_progress=on_progress)
+
+        self.assertEqual(res.status_code, "200")
 
         # функція програс бара  в якосі аргумента
         # для чекання прогреса скачування
@@ -254,8 +266,8 @@ class Test_urllib(unittest.TestCase):
                                output=os.path.join(self.file_path,
                                                    "socket_page.html"))
         self.assertEqual(res.status_code, "200")
-        self.assertRegex(res.body, "eulav")
-        self.assertRegex(res.body, "value")
+        self.assertRegex(res.body, b"eulav")
+        self.assertRegex(res.body, b"value")
 
         # перевірка відправки файла через контрольну суму MD5
         # та виводу сторінки в файл
@@ -280,14 +292,14 @@ class Test_urllib(unittest.TestCase):
         m = hashlib.md5()
         m.update(file_)
         self.assertEqual(res.status_code, "200")
-        self.assertRegex(res.body, m.hexdigest())
+        self.assertRegex(res.body, m.hexdigest().encode())
 
         with open(os.path.join(self.file_path,
                                "socket_page.html"), "r") as fp:
             data = fp.read()
 
-        self.assertNotRegex(res.body, "Username: kiril")
-        self.assertNotRegex(res.body, "Password:  supersecret")
+        self.assertNotRegex(res.body, b"Username: kiril")
+        self.assertNotRegex(res.body, b"Password:  supersecret")
         self.assertNotRegex(data, "Username: kiril")
         self.assertNotRegex(data, "Password: supersecret")
 
@@ -301,10 +313,10 @@ class Test_urllib(unittest.TestCase):
                                auth=("user", "ololo"),
                                history_body=True)
 
-        self.assertRegex(res.body, "COOKIE: key=value")
-        self.assertRegex(res.body, "X_FROM: UAUA")
-        self.assertRegex(res.body, "Username: user")
-        self.assertRegex(res.body, "Password: ololo")
+        self.assertRegex(res.body, b"COOKIE: key=value")
+        self.assertRegex(res.body, b"X_FROM: UAUA")
+        self.assertRegex(res.body, b"Username: user")
+        self.assertRegex(res.body, b"Password: ololo")
         self.assertIsNotNone(res.history)
 
         # перевірка відправки данних
@@ -315,9 +327,9 @@ class Test_urllib(unittest.TestCase):
                                referrer='http://httpbin.org/',
                                history_body=True)
         self.assertEqual(res.status_code, "200")
-        self.assertRegex(res.body, '"k1": "value"')
-        self.assertRegex(res.body, '"k2": "eulav"')
-        self.assertRegex(res.body, '"Referrer": "http://httpbin.org/"')
+        self.assertRegex(res.body, b'"k1": "value"')
+        self.assertRegex(res.body, b'"k2": "eulav"')
+        self.assertRegex(res.body, b'"Referrer": "http://httpbin.org/"')
         self.assertIsNotNone(res.history)
 
         # обмеження кількості редіректів
@@ -337,7 +349,7 @@ class Test_urllib(unittest.TestCase):
                               output=os.path.join(self.file_path,
                                                   "socket_page.html"))
         self.assertEqual(res.status_code, "200")
-        self.assertRegex(res.body, "html")
+        self.assertRegex(res.body, b"html")
         self.assertEqual(len(res.body), 400)
         self.assertEqual(
             os.path.getsize(
@@ -350,7 +362,7 @@ class Test_urllib(unittest.TestCase):
         res = self.client.post('http://' + self.sock + "/test_timeout",
                                data={'k1': 'value', 'k2': 'eulav'})
         self.assertEqual(res.status_code, "")
-        self.assertEqual(res.body, "")
+        self.assertEqual(res.body, b"")
 
         # переврка виставлення обмежження повтору запитів
         # при 5хх помилках
@@ -372,14 +384,14 @@ class Test_urllib(unittest.TestCase):
         print("DELETE")
         res = self.client.delete(
             'http://httpbin.org/delete?mama=papa&alala=ololo')
-        self.assertRegex(res.body, '"mama": "papa"')
+        self.assertRegex(res.body, b'"mama": "papa"')
         self.assertEqual(res.status_code, "200")
 
         print("PUT")
         res = self.client.put('http://httpbin.org/put',
                               data={'k1': 'value', 'k2': 'eulav'})
-        self.assertRegex(res.body, '"k1": "value"')
-        self.assertRegex(res.body, '"k2": "eulav"')
+        self.assertRegex(res.body, b'"k1": "value"')
+        self.assertRegex(res.body, b'"k2": "eulav"')
         self.assertEqual(res.status_code, "200")
 
         print("HEAD")
@@ -420,10 +432,10 @@ class Test_urllib(unittest.TestCase):
             else:
                 break
         for res in arr_obj:
-            self.assertRegex(res.body, '"q": "Trump"')
-            self.assertRegex(res.body, '"start": "10"')
-            self.assertRegex(res.body, '"key=value"')
-            self.assertRegex(res.body, '"X-From": "UAUA"')
+            self.assertRegex(res.body, b'"q": "Trump"')
+            self.assertRegex(res.body, b'"start": "10"')
+            self.assertRegex(res.body, b'"key=value"')
+            self.assertRegex(res.body, b'"X-From": "UAUA"')
             self.assertEqual(res.status_code, "200")
 
         print(time.time() - start_time)
@@ -461,7 +473,7 @@ class Test_urllib(unittest.TestCase):
 
         for i in range(len(arr_obj)):
             self.assertEqual(arr_obj[i].status_code, "")
-            self.assertEqual(arr_obj[i].body, "")
+            self.assertEqual(arr_obj[i].body, b"")
 
         # Базова аутентифікація
         # та запису до файла
@@ -498,7 +510,7 @@ class Test_urllib(unittest.TestCase):
 
         for i in range(len(arr_obj)):
             self.assertEqual(arr_obj[i].status_code, "200")
-            self.assertRegex(arr_obj[i].body, '"authenticated": true')
+            self.assertRegex(arr_obj[i].body, b'"authenticated": true')
             self.assertIsNotNone(arr_obj[i].history)
 
         path = os.path.join(self.file_path, "socket_page_1.html")
@@ -539,7 +551,7 @@ class Test_urllib(unittest.TestCase):
                 break
 
         for i in range(len(arr_obj)):
-            data = json.loads(arr_obj[i].body)
+            data = json.loads(arr_obj[i].body.decode(arr_obj[i].encoding))
             self.assertEqual(arr_obj[i].status_code, "200")
             self.assertEqual(data["args"]["qwerty"], "12345")
 
@@ -751,7 +763,7 @@ class Test_urllib(unittest.TestCase):
                 break
 
         for i in range(len(arr_obj)):
-            data = json.loads(arr_obj[i].body)
+            data = json.loads(arr_obj[i].body.decode(arr_obj[i].encoding))
             self.assertEqual(arr_obj[i].status_code, "200")
             self.assertEqual(data["form"]["k1"], "value")
             self.assertEqual(data["form"]["k2"], "eulav")
@@ -809,9 +821,9 @@ class Test_urllib(unittest.TestCase):
 
         for i in range(len(arr_obj)):
             self.assertEqual(arr_obj[i].status_code, "200")
-            self.assertRegex(arr_obj[i].body, str(control_sum))
-            self.assertRegex(arr_obj[i].body, "Username: user")
-            self.assertRegex(arr_obj[i].body, "Password: ololo")
+            self.assertRegex(arr_obj[i].body, control_sum.encode())
+            self.assertRegex(arr_obj[i].body, b"Username: user")
+            self.assertRegex(arr_obj[i].body, b"Password: ololo")
 
         # перевірка обмеження кількості редіректів
         #
@@ -912,7 +924,7 @@ class Test_urllib(unittest.TestCase):
 
         for i in range(len(arr_obj)):
             self.assertEqual(arr_obj[i].status_code, "")
-            self.assertEqual(arr_obj[i].body, "")
+            self.assertEqual(arr_obj[i].body, b"")
 
 
 if __name__ == '__main__':

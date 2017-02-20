@@ -16,7 +16,6 @@ import sys
 import time
 import configparser
 from time import sleep
-import time
 
 
 class SocketFallError(Exception):
@@ -96,9 +95,6 @@ class HttpClient(object):
         if "retry_delay" in kwargs:
             self.retry_delay = kwargs["retry_delay"]
 
-        if "settings" in kwargs:
-            self.settings = kwargs["settings"]
-
         self.req_line = b""
         self.is_f_req = True
         self.cook_dick = {}
@@ -128,10 +124,10 @@ class HttpClient(object):
         self.status_code = ""
         self.headers = {}
         self.encoding = ""
-        self.body = ""
+        self.body = b""
         self.history = []
         # for nonblocking
-        self.page = ""
+        self.page = b""
         self.firstin = True
         self.chunked_index = 0
         self.page_str = b""  # for chunked module nonblocking
@@ -290,7 +286,6 @@ class HttpClient(object):
             except ConnectionError as e:
                 # logger
                 self.logger.error('ConnectionError' + str(e.args))
-                # self.del_sock()
                 return(False, "", "")
 
             except FileNotFoundError as e:
@@ -637,10 +632,7 @@ class HttpClient(object):
             if not on_headers:
                     # logger
                 self.logger.info("on_headers is drop download ...")
-                if self.encoding is not None:
-                    self.page += page_bytes.decode(self.encoding)
-                if self.encoding is None:
-                    self.page = ""
+                self.page += page_bytes
                 return (True, self.page)
 
         if "on_progress" in self.kwargs:
@@ -648,7 +640,7 @@ class HttpClient(object):
             prog_status = on_progress(
                 len(page_bytes), int(self.headers["Content-Length"]))
             if not prog_status:
-                (True, self.page)
+                return (True, self.page)
 
         if int(self.headers["Content-Length"]) <= 0:
             return (True, self.page)
@@ -690,29 +682,19 @@ class HttpClient(object):
                     if "output" in self.kwargs:
                         # logger
                         self.logger.info("Download to file is complited.")
-                    if self.encoding is not None:
-                        self.page += self.data[
-                            self.start_index:].decode(self.encoding)
-                    if self.encoding is None:
-                        self.page = ""
+                    self.page += self.data[self.start_index:]
                     return (True, self.page)
-
-                return (False, "")
+                return (False, b"")
 
             if len(page_bytes) >= int(self.headers["Content-Length"]):
                 if "output" in self.kwargs:
                     # logger
                     self.logger.info("Download to file is complited.")
-                if self.encoding is not None:
-                    self.page += self.data[
-                        self.start_index:].decode(self.encoding)
-                if self.encoding is None:
-                    self.page = ""
+                self.page += self.data[self.start_index:]
                 return (True, self.page)
 
     def content_length(self, page_bytes,
                        transfer_timeout, kwargs, max_size):
-        page = ""
         if "on_headers" in kwargs:
             on_headers = kwargs["on_headers"](self.headers)
             if not on_headers:
@@ -750,19 +732,14 @@ class HttpClient(object):
                             fp.write(page_bytes[curent_size:])
 
                 if not response[0]:
-                    return (False, "")
+                    return (False, b"")
 
                 if response[0]:
                     page_bytes += response[1]
 
                 if max_size is not None and max_size < len(page_bytes):
-                    if self.encoding is None:
-                        self.del_sock()
-                        return(True, page_bytes[0:max_size])
-                    else:
-                        self.del_sock()
-                        return(True,
-                               page_bytes[0:max_size].decode(self.encoding))
+                    self.del_sock()
+                    return(True, page_bytes[0:max_size])
 
                 if "on_progress" in kwargs:
                     prog_status = on_progress(
@@ -770,12 +747,7 @@ class HttpClient(object):
                         int(self.headers["Content-Length"]))
                     if not prog_status:
                         break
-        if self.encoding is not None:
-            page += page_bytes.decode(self.encoding)
-
-        if self.encoding is None:
-            page = ""
-        return (True, page)
+        return (True, page_bytes)
 
     def transfer_encodong_nonblocking(self):
         self.logger.info("Chunked  mode")
@@ -785,13 +757,9 @@ class HttpClient(object):
         page_bytes = self.data[self.start_index:]
         if "on_progress" in self.kwargs:
             on_progress = self.kwargs["on_progress"]
-            prog_status = on_progress(len(page_bytes), None)
+            prog_status = on_progress(len(self.page_str), None)
             if not prog_status:
-                if self.encoding is not None:
-                    page = self.page_str.decode(self.encoding)
-                if self.encoding is None:
-                    page = ''
-                (True, page)
+                return (True, self.page_str)
 
         if len(page_bytes[self.chunked_index:]) < 7:
             response = self.sock.recv(2048)
@@ -803,7 +771,7 @@ class HttpClient(object):
             response = self.sock.recv(2048)
             page_bytes = self.data[self.start_index:]
             self.data += response
-            return(False, "")
+            return(False, b"")
 
         self.logger.info("m-len: " + str(m_len is not None))
         len_len = len(m_len.group())        # len() of LEN  +\r\n
@@ -847,22 +815,14 @@ class HttpClient(object):
 
         if byte_len == 0:
             if self.max_size is None:
-                if self.encoding is not None:
-                    page = self.page_str.decode(self.encoding)
-                if self.encoding is None:
-                    page = ''
+                page = self.page_str
 
             if self.max_size is not None:
-                if self.encoding is not None:
-                    new_page_str = self.page_str[0: self.max_size]
-                    page = new_page_str.decode(self.encoding)
-
-                if self.encoding is None:
-                    page = ''
+                page = self.page_str[0: self.max_size]
             return (True, page)
 
         if byte_len != 0:
-            return (False, "")
+            return (False, b"")
 
     def transfer_encodong(self, page_bytes,
                           transfer_timeout, kwargs, max_size):
@@ -872,14 +832,6 @@ class HttpClient(object):
         page_bytes += self.soket_recv(2048, transfer_timeout)[1]
         pattern = re.search(b"(\w+?)\r\n", page_bytes).group(1)
         content_pattern = None
-        if "on_progress" in kwargs:
-            prog_status = on_progress(len(page_bytes), None)
-            if not prog_status:
-                if self.encoding is not None:
-                    page = page_str.decode(self.encoding)
-                if self.encoding is None:
-                    page = ''
-                return (True, page)
 
         if "output" in kwargs:
             with open(kwargs["output"], "wb") as fp:
@@ -889,20 +841,19 @@ class HttpClient(object):
             byte_len = 0
         while byte_len != 0:
             if "on_progress" in kwargs:
-                prog_status = on_progress(len(page_bytes), None)
+                on_progress = kwargs["on_progress"]
+                prog_status = on_progress(len(page_str), None)
+                print("prog_status", prog_status)
+                print("page_str", len(page_str))
                 if not prog_status:
-                    if self.encoding is not None:
-                        page = page_str.decode(self.encoding)
-                    if self.encoding is None:
-                        page = ''
-                    return (True, page)
+                    return (True, page_str)
 
             if len(page_bytes[start_page_index:]) < 7:
                 response = self.soket_recv(2048, transfer_timeout)
                 if response[0]:
                     page_bytes += response[1]
                 if not response[0]:
-                    return (False, "")
+                    return (False, b"")
 
             m_len = re.search(b"(\r\n)?(.+?)\r\n",
                               page_bytes[start_page_index:])
@@ -912,7 +863,7 @@ class HttpClient(object):
                 if response[0]:
                     page_bytes += response[1]
                 if not response[0]:
-                    return (False, "")
+                    return (False, b"")
                 continue
 
             len_len = len(m_len.group())        # len() of LEN  +\r\n
@@ -922,7 +873,7 @@ class HttpClient(object):
                 if response[0]:
                     page_bytes += response[1]
                 if not response[0]:
-                    return (False, "")
+                    return (False, b"")
 
             from_ = start_page_index + len_len
             to_ = start_page_index + len_len + byte_len
@@ -947,19 +898,16 @@ class HttpClient(object):
                             fp.write(this_page[0:part_this_page])
                             break
 
+            if max_size is not None:
+                if len(page_str) >= max_size:
+                    break
+
         if max_size is None:
-            if self.encoding is not None:
-                page = page_str.decode(self.encoding)
-            if self.encoding is None:
-                page = ''
+            page = page_str
 
         if max_size is not None:
-            if self.encoding is not None:
-                new_page_str = page_str[0: max_size]
-                page = new_page_str.decode(self.encoding)
-
-            if self.encoding is None:
-                page = ''
+            new_page_str = page_str[0: max_size]
+            page = new_page_str
 
         return (True, page)
 
@@ -971,12 +919,8 @@ class HttpClient(object):
             on_progress = self.kwargs["on_progress"]
             prog_status = on_progress(len(page_bytes), None)
             if not prog_status:
-                if self.encoding is not None:
-                    self.page += self.data[
-                        self.start_index:].decode(self.encoding)
-                if self.encoding is None:
-                    self.page = ""
-                return (True, self.page)
+                self.page += self.data[self.start_index:]
+            return (True, self.page)
 
         if not self.firstin:
             if "output" in self.kwargs:
@@ -991,42 +935,38 @@ class HttpClient(object):
 
         if self.max_size is not None:
             if len(page_bytes) <= self.max_size:
-                return (True, page_bytes[:self.max_size].decode(self.encoding))
+                return (True, page_bytes[:self.max_size])
 
         endof = re.search(b"</html>", page_bytes)
         if endof is not None:
-            if self.encoding is not None:
-                self.page += self.data[self.start_index:].decode(self.encoding)
-            if self.encoding is None:
-                self.page = ""
+            self.page += self.data[self.start_index:]
             return (True, self.page)
         else:
-            return (False, "")
+            return (False, b"")
 
     def connection_close(self, page_bytes,
                          transfer_timeout, kwargs, max_size):
 
-        is_stop_recursion = True
         if "output" in kwargs:
             start_page_index = len(page_bytes)
             with open(kwargs["output"], "wb") as fp:
                 fp.write(page_bytes)
         if "on_progress" in kwargs:
+            on_progress = kwargs["on_progress"]
             prog_status = on_progress(len(page_bytes),
                                       int(self.headers["Content-Length"]))
             if not prog_status:
                 if self.encoding is None:
-                    return (True, "")
-                return (True, page_bytes.decode(self.encoding))
+                    return (True, b"")
+                return (True, page_bytes)
 
-        while is_stop_recursion:
+        while True:
             if "on_progress" in kwargs:
+                on_progress = kwargs["on_progress"]
                 prog_status = on_progress(len(page_bytes),
                                           int(self.headers["Content-Length"]))
                 if not prog_status:
-                    if self.encoding is None:
-                        return (True, "")
-                    return (True, page_bytes.decode(self.encoding))
+                    return (True, page_bytes)
 
             response = self.soket_recv(65536, transfer_timeout)
             page_bytes += response[1]
@@ -1038,16 +978,14 @@ class HttpClient(object):
             if max_size is not None:
                 if len(page_bytes) <= max_size:
                     self.del_sock()
-                    return (True, page_bytes[:max_size].decode(self.encoding))
+                    return (True, page_bytes[:max_size])
 
             endof = re.search(b"</html>", response[1])
             if endof is not None:
-                return (True, page_bytes.decode(self.encoding))
+                return (True, page_bytes)
 
             if not response[0]:
-                if self.encoding is None:
-                    return (True, "")
-                return (True, page_bytes.decode(self.encoding))
+                return (True, page_bytes)
 
     def load_cookies(self, directory):
         if self.load_cookie is not None:
@@ -1474,7 +1412,7 @@ class HttpClient(object):
                 self.status_code = ""
                 self.headers = {}
                 self.encoding = ""
-                self.body = ""
+                self.body = b""
 
                 response = self.connect(url, kwargs, headers_all, url_previos,
                                         type_req, bytes_to_send,
@@ -1496,14 +1434,15 @@ class HttpClient(object):
 
                 result = self.soket_recv(16, transfer_timeout)
                 first_str = result[1].decode("ascii")
-                page = ""  # Variable which will be returnes(NOT BYTES)
+                page = b""  # Variable which will be returnes(BYTES)
                 start_index = None  # Startindex of message body
+                print(first_str)
                 status = re.search("HTTP.*? (\d+) .*?", first_str)
                 if status is None:
                     # logger
                     self.logger.error(first_str)
                     self.logger.error("Critical ERROR: No status code!")
-
+                    break
                 self.status_code = status.group(1)
 
                 if status is not None:
@@ -1527,7 +1466,7 @@ class HttpClient(object):
                             "You have 4-th ERROR of 4xx http response")
                         self.logger.info("Enter correct informations")
                         self.encoding = ""
-                        self.body = ""
+                        self.body = b""
                         self.history = []
                         self.headers = {}
                         return self
@@ -1748,7 +1687,6 @@ class HttpClient(object):
                 self.sock.close()
                 # logger
                 self.logger.error('OSError: ' + str(os.strerror(e.errno)))
-                self.soket_dic.pop(self.host)
                 self.del_sock()
                 return self
 
