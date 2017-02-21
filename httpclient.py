@@ -1347,6 +1347,8 @@ class HttpClient(object):
                 self.headers = {}
                 self.encoding = ""
                 self.body = b""
+                page = b""  # Variable which will be returnes(BYTES)
+                start_index = None  # Startindex of message body
                 response = self.connect(url, kwargs, headers_all, url_previos,
                                         type_req, bytes_to_send,
                                         transfer_timeout)
@@ -1365,16 +1367,33 @@ class HttpClient(object):
 
                 result = self.soket_recv(16, transfer_timeout)
                 first_str = result[1].decode("ascii")
-                page = b""  # Variable which will be returnes(BYTES)
-                start_index = None  # Startindex of message body
                 status = re.search("HTTP.*? (\d+) .*?", first_str)
                 if status is None:
                     self.logger.error(first_str)
-                    print(+self.soket_recv(300, transfer_timeout))
                     self.logger.error("Critical ERROR: No status code!")
                     break
                 self.status_code = status.group(1)
                 if status is not None:
+                    this_stack_bytes = result[1]
+                    while True:
+                        response = self.soket_recv(4096, transfer_timeout)
+                        if response[0]:
+                            this_stack_bytes += response[1]
+                        if not response[0]:
+                            self.logger.error("ERROR: First 4096 byte error")
+                            break
+                        m_headers = re.search(b".+?\r\n\r\n",
+                                              this_stack_bytes, re.DOTALL)
+
+                        if m_headers is not None:
+                            break
+                    all_headers = m_headers.group().decode("ascii")
+                    headers_and_startindex = self.search_headers(all_headers)
+                    # start index of message body
+                    start_index = m_headers.span()[1]
+                    cookies_list = headers_and_startindex[1]
+                    self.headers = headers_and_startindex[0]
+
                     if status.group(1)[0] == "5":
                         self.del_sock()
                         if self.raise_on_error:
@@ -1388,15 +1407,11 @@ class HttpClient(object):
 
                     if status.group(1)[0] == "4":
                         self.del_sock()
-                        self.logger.error(
-                            "You have 4-th ERROR of 4xx http response")
-                        self.logger.info("Enter correct informations")
+                        self.logger.error("You have 4-th ERROR")
                         self.encoding = ""
                         self.body = b""
                         self.history = []
-                        self.headers = {}
                         return self
-                        break
 
                     if status.group(1)[0] == "3" or status.group(1)[0] == "2":
                         if type_req == "DELETE" and status.group(1)[0] == "3":
@@ -1406,30 +1421,6 @@ class HttpClient(object):
                                 "for DELETE method Enter correct informations")
                             break
 
-                        this_stack_bytes = result[1]
-                        while True:
-                            response = self.soket_recv(4096, transfer_timeout)
-                            if response[0]:
-                                this_stack_bytes += response[1]
-
-                            if not response[0]:
-                                self.logger.error(
-                                    "ERROR: First 4096 byte error")
-                                break
-
-                            m_headers = re.search(b".+?\r\n\r\n",
-                                                  this_stack_bytes, re.DOTALL)
-
-                            if m_headers is not None:
-                                break
-
-                        all_headers = m_headers.group().decode("ascii")
-                        headers_and_startindex = self.search_headers(
-                            all_headers)
-                        # start index of message body
-                        start_index = m_headers.span()[1]
-                        cookies_list = headers_and_startindex[1]
-                        self.headers = headers_and_startindex[0]
                         self.encoding = None
                         if "Content-Type" in self.headers:
                             charset_list = ["text", "json"]
