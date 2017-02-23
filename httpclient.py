@@ -1441,7 +1441,14 @@ class HttpClient(object):
                                       bytes_to_send)
 
                 result = self.soket_recv(16, transfer_timeout)
-                first_str = result[1].decode("ascii")
+                try:
+                    first_str = result[1].decode("ascii")
+                except UnicodeDecodeError as e:
+                    self.logger.critical(result)
+                    self.logger.critical(
+                        "Error: 'ascii' codec can't decode first byte")
+                    return self
+
                 status = re.search("HTTP.*? (\d+) .*?", first_str)
                 if status is None:
                     self.logger.error(first_str)
