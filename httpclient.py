@@ -148,6 +148,7 @@ class HttpClient(object):
         self.isconnect = False
         self.issend = False
         self.isrecv = False
+        self.start_time = time.time()
 
         self.response_str = ""
         # self.soket_dic[Host] = { "socket": sock, "index" : index}
@@ -252,15 +253,13 @@ class HttpClient(object):
         while True:
             try:
                 if self.host in self.soket_dic and self.proxy is None:
-                    # if error means socket close from another side
-                    # and raise OSError
-                    self.logger.info('socket exist')
+                    self.logger.debug('socket exist')
                     self.sock = self.soket_dic[self.host]["socket"]
                     self.soket_dic[self.host]["index"] += 1
                     self.is_f_req = True
 
                 if self.host not in self.soket_dic and self.proxy is None:
-                    self.logger.info('socket does not exist')
+                    self.logger.debug('socket does not exist')
                     self.sock = socket.socket(
                         socket.AF_INET, socket.SOCK_STREAM)
 
@@ -271,16 +270,24 @@ class HttpClient(object):
                         ip = self.ipfromhost(self.host)
                         if ip is not None:
                             addr = (ip, 80)
+                            self.logger.debug('Ip from list')
                         if ip is None:
                             addr = (self.host, 80)
 
-                    self.sock.settimeout(self.connect_timeout)
-                    self.sock.connect(addr)
-                    self.host_ip_dic[self.host] = self.sock.getpeername()[0]
                     if self.nonblocking:
-                        self.sock.settimeout(0)
+                        self.sock.settimeout(0.0)
+                        try:
+                            self.sock.connect(addr)
+                        except socket.error as err:
+                            if err.errno != errno.EINPROGRESS:
+                                raise
+
                     if not self.nonblocking:
+                        self.sock.settimeout(self.connect_timeout)
+                        self.sock.connect(addr)
                         self.sock.settimeout(None)
+                        self.host_ip_dic[self.host] = self.sock.getpeername()[
+                            0]
 
                     self.soket_dic[self.host] = {
                         "socket": self.sock, "index": 0}
@@ -649,8 +656,8 @@ class HttpClient(object):
         return (header, cookies_list)
 
     def content_length_nonblocking(self):
-        self.logger.info("Conent len mode")
-        self.logger.info("len is: " + str(self.headers["Content-Length"]))
+        self.logger.debug("Conent len mode")
+        self.logger.debug("len is: " + str(self.headers["Content-Length"]))
         page_bytes = self.data[self.start_index:]
         if "on_progress" in self.kwargs:
             on_progress = self.kwargs["on_progress"]
@@ -694,9 +701,9 @@ class HttpClient(object):
 
                 self.data += response
                 page_bytes = self.data[self.start_index:]
-                self.logger.info("Now is body data: " + str(len(page_bytes)))
-                self.logger.info("content-lenght:" +
-                                 str(self.headers["Content-Length"]))
+                self.logger.debug("Now is body data: " + str(len(page_bytes)))
+                self.logger.debug("content-lenght:" +
+                                  str(self.headers["Content-Length"]))
 
                 if len(page_bytes) >= int(self.headers["Content-Length"]):
                     if "output" in self.kwargs:
@@ -765,9 +772,9 @@ class HttpClient(object):
         return (True, page_bytes)
 
     def transfer_encodong_nonblocking(self):
-        self.logger.info("Chunked  mode")
+        self.logger.debug("Chunked  mode")
         page_bytes = self.data[self.start_index:]
-        self.logger.info("In loop")
+        self.logger.debug("In loop")
         page_bytes = self.data[self.start_index:]
         if "on_progress" in self.kwargs:
             on_progress = self.kwargs["on_progress"]
@@ -787,7 +794,7 @@ class HttpClient(object):
             self.data += response
             return(False, b"")
 
-        self.logger.info("m-len: " + str(m_len is not None))
+        self.logger.debug("m-len: " + str(m_len is not None))
         len_len = len(m_len.group())        # len() of LEN  +\r\n
         byte_len = int(m_len.group(2), 16)
 
@@ -1002,7 +1009,6 @@ class HttpClient(object):
                 with open(directory, "r", encoding='utf-8') as fp:
                     file = fp.read()
             except FileNotFoundError as e:
-                # logger
                 self.logger.info("Coockie's file not found")
                 return {}
             else:
@@ -1072,7 +1078,9 @@ class HttpClient(object):
                     return False
 
         except IndexError as e:
-            self.logger.info("all data send")
+            self.logger.debug("all data send")
+            if self.proxy is None:
+                self.host_ip_dic[self.host] = self.sock.getpeername()[0]
             return True
 
     def zeroing(self, status):
@@ -1098,7 +1106,7 @@ class HttpClient(object):
         try:
             if not self.isheaders:
                 self.data += self.sock.recv(65536)
-                self.logger.info("recv 65536")
+                self.logger.debug("recv 65536")
                 status = re.search(b"HTTP.*? (\d+) ", self.data[:16])
                 if status is None:
                     self.logger.error("Critical ERROR: No status code!")
@@ -1106,7 +1114,7 @@ class HttpClient(object):
                         raise HttpErrors(400)
                     return "error"
                 self.status_code = status.group(1).decode()
-                self.logger.info("status code: " + str(self.status_code))
+                self.logger.debug("status code: " + str(self.status_code))
                 m_headers = re.search(b".+?\r\n\r\n", self.data, re.DOTALL)
                 if m_headers is None:
                     if len(self.data) > 16:
@@ -1148,11 +1156,10 @@ class HttpClient(object):
                             "You have 5-th ERROR of 5xx http response")
                         if self.raise_on_error:
                             raise HttpErrors(self.status_code)
-
-                        time.sleep(self.retry_delay)
                         self.retry_index += 1
                         if (self.retry_index >= self.retry):
                             return "ok"
+                        time.sleep(self.retry_delay)
                         return self.zeroing("continue")
 
                     if self.status_code[0] == "4":
@@ -1213,50 +1220,51 @@ class HttpClient(object):
 
                 if not self.type_req == "HEAD":
                     if "Content-Length" in self.headers:
-                        self.logger.info("Type of download: Content-Length")
+                        self.logger.debug("Type of download: Content-Length")
                         response, self.body = self.content_length_nonblocking()
                         if response:
-                            self.logger.info("Content Len: OK")
+                            self.logger.debug("Content Len: OK")
                             self.isbody = True
                             return "ok"
 
                         if not response:
-                            self.logger.info(
+                            self.logger.debug(
                                 "Content Len: we need more iter...")
                             return "continue"
 
                     if "Transfer-Encoding" in self.headers:
-                        self.logger.info("Type of download: Transfer-Encoding")
+                        self.logger.debug(
+                            "Type of download: Transfer-Encoding")
                         try:
                             answer = self.transfer_encodong_nonblocking()
                             response, self.body = answer
                         except BlockingIOError as e:
-                            self.logger.info("Transfer-Encoding ERROR")
+                            self.logger.debug("Transfer-Encoding ERROR")
                             raise e
 
                         else:
                             if response:
-                                self.logger.info("Transfer-Encoding: OK")
+                                self.logger.debug("Transfer-Encoding: OK")
                                 self.isbody = True
                                 return "ok"
 
                             if not response:
-                                self.logger.info(
+                                self.logger.debug(
                                     "Transfer-Encoding: we need more iter...")
                                 return "continue"
 
                     if ("Transfer-Encoding" not in self.headers and
                             "Content-Length" not in self.headers):
-                        self.logger.info("Type of download: Connection_close")
+                        self.logger.debug("Type of download: Connection_close")
                         answer = self.connection_close_nonblocking()
                         response, self.body = answer
                         if response:
-                            self.logger.info("Conection close: OK")
+                            self.logger.debug("Conection close: OK")
                             self.isbody = True
                             return "ok"
 
                         if not response:
-                            self.logger.info(
+                            self.logger.debug(
                                 "Conection close: we need more iter...")
                             return "continue"
             if self.isbody:
@@ -1269,7 +1277,7 @@ class HttpClient(object):
             if self.isbody:
                 return "ok"
             else:
-                self.logger.info("continue ...")
+                self.logger.debug("continue ...")
                 return "continue"
 
     def isready(self):
@@ -1292,7 +1300,7 @@ class HttpClient(object):
                         self.host_ip_dic[str(self.host)] = ip
                         self.isgetipfromhost = True
                     else:
-                        self.logger.critical("Connection to socket: ERROR")
+                        self.logger.critical("Connection to dns: ERROR")
                         self.isgetipfromhost = False
                 else:
                     self.isgetipfromhost = True
@@ -1300,7 +1308,7 @@ class HttpClient(object):
             if (self.isgetipfromhost and not
                     self.isconnect and not self.isrecv):
 
-                self.logger.info("Connect mode " + str(self.host))
+                self.logger.debug("Connect mode " + str(self.host))
                 response = self.connect(
                     url=self.url,
                     kwargs=self.kwargs,
@@ -1312,7 +1320,10 @@ class HttpClient(object):
 
                 # Connection to socket is OK
                 if response[0]:
-                    self.logger.info("Connection to socket is OK")
+                    self.logger.debug("Connection to socket is OK")
+                    self.logger.info(
+                        str(round(time.time() - self.start_time, 3)) +
+                        "   time connection " + self.host)
                     result = response[1]
                     request_str = response[2]
                     self.isconnect = True
@@ -1328,14 +1339,13 @@ class HttpClient(object):
             if (self.isgetipfromhost and
                     self.isconnect and not
                     self.issend and not self.isrecv):
-
+                self.logger.debug("Send mode ...")
                 issend = self.sendnonblock()
                 if issend:
                     self.issend = True
-                    # parameters for recv
                     self.isheaders = False
                     self.isbody = False
-                    self.logger.info("Issend True")
+                    self.logger.debug("Issend True")
                 else:
                     self.issend = False
 
@@ -1343,7 +1353,10 @@ class HttpClient(object):
                     self.issend and not self.isrecv):
                 describe = self.recvnonblock()
                 if describe in ["ok", "error"]:
-                    self.logger.info("isrecv: " + describe + " go to exit")
+                    self.logger.debug("isrecv: " + describe + " go to exit")
+                    self.logger.info(
+                        str(round(time.time() - self.start_time, 3)) +
+                        "  time to recv " + self.host)
                     self.isrecv = True
                 else:
                     self.isrecv = False
@@ -1378,6 +1391,7 @@ class HttpClient(object):
                 self.logger.info("All data is here")
                 return True
             else:
+                # self.logger.info("BlockingIOError")
                 return False
 
         except SocketFallError as e:
@@ -1475,13 +1489,12 @@ class HttpClient(object):
                         self.del_sock()
                         self.logger.error(
                             "You have 5-th ERROR of 5xx http response")
-
                         if self.raise_on_error:
                             raise HttpErrors(self.status_code)
-                        time.sleep(self.retry_delay)
                         self.retry_index += 1
                         if (self.retry_index >= retry):
                             return self
+                        time.sleep(self.retry_delay)
 
                     if self.status_code[0] == "4":
                         self.del_sock()
@@ -1668,7 +1681,7 @@ class HttpClient(object):
                 history: list of redirect history
 
         """
-        self.logger.info("Try to connect: " + str(link))
+        self.logger.debug("Try to connect: " + str(link))
         self.is_f_req = True
         bytes_to_send = None
         url_previos = ""
@@ -1782,6 +1795,7 @@ class HttpClient(object):
             children.isheaders = False
             children.isbody = False
             children.isrecv = False
+            children.host_ip_dic = self.host_ip_dic
             return children
 
         if not self.nonblocking:
@@ -1919,6 +1933,7 @@ class HttpClient(object):
             children.isheaders = False
             children.isbody = False
             children.isrecv = False
+            children.host_ip_dic = self.host_ip_dic
             return children
 
         if not self.nonblocking:
@@ -2053,6 +2068,7 @@ class HttpClient(object):
             children.isheaders = False
             children.isbody = False
             children.isrecv = False
+            children.host_ip_dic = self.host_ip_dic
             return children
 
         if not self.nonblocking:
@@ -2199,6 +2215,7 @@ class HttpClient(object):
             children.isheaders = False
             children.isbody = False
             children.isrecv = False
+            children.host_ip_dic = self.host_ip_dic
             return children
 
         if not self.nonblocking:
@@ -2341,6 +2358,7 @@ class HttpClient(object):
             children.isheaders = False
             children.isbody = False
             children.isrecv = False
+            children.host_ip_dic = self.host_ip_dic
             return children
 
         if not self.nonblocking:

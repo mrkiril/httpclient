@@ -489,10 +489,10 @@ class Test_urllib(unittest.TestCase):
         # Обмеження кількості повторних запитів
         # при 5хх помилкахсервера
         #
-        res1 = self.client.get("http://httpbin.org/status/501",
+        res1 = self.client.get("http://httpbin.org/status/502",
                                retry=1,
                                nonblocking=True)
-        res2 = self.client.get("http://httpbin.org/status/501",
+        res2 = self.client.get("http://httpbin.org/status/502",
                                retry=1,
                                nonblocking=True)
         arr_obj = [res1, res2]
@@ -514,7 +514,7 @@ class Test_urllib(unittest.TestCase):
                 break
 
         for i in range(len(arr_obj)):
-            self.assertEqual(arr_obj[i].status_code, "501")
+            self.assertEqual(arr_obj[i].status_code, "502")
             self.assertEqual(arr_obj[i].retry_index, 1)
 
         # raise_on_error при 5хх помилках
