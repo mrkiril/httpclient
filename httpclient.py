@@ -194,26 +194,26 @@ class HttpClient(object):
                     dict1[option] = config.get("SETTINGS", option)
                 except:
                     dict1[option] = None
-
-            if "load_cookie" in dict1:
+            if "load_cookie" in dict1 and dict1["load_cookie"] != "":
                 self.load_cookie = dict1["load_cookie"]
-            if "save_cookie" in dict1:
+            if "save_cookie" in dict1 and dict1["save_cookie"] != "":
                 self.save_cookie = dict1["save_cookie"]
-            if "connect_timeout" in dict1:
+            if "connect_timeout" in dict1 and dict1["connect_timeout"] != "":
                 self.connect_timeout = int(dict1["connect_timeout"])
-            if "transfer_timeout" in dict1:
+            if ("transfer_timeout" in dict1 and
+                    dict1["transfer_timeout"] != ""):
                 self.transfer_timeout = int(dict1["transfer_timeout"])
-            if "max_redirects" in dict1:
+            if "max_redirects" in dict1 and dict1["max_redirects"] != "":
                 self.max_redirects = int(dict1["max_redirects"])
-            if "set_referer" in dict1:
+            if "set_referer" in dict1 and dict1["set_referer"] != "":
                 self.set_referer = bool(dict1["set_referer"])
-            if "keep_alive" in dict1:
+            if "keep_alive" in dict1 and dict1["keep_alive"] != "":
                 self.keep_alive = int(dict1["keep_alive"])
-            if "http_version" in dict1:
+            if "http_version" in dict1 and dict1["http_version"] != "":
                 self.http_version = dict1["http_version"]
-            if "retry" in dict1:
+            if "retry" in dict1 and dict1["retry"] != "":
                 self.retry = int(dict1["retry"])
-            if "retry_delay" in dict1:
+            if "retry_delay" in dict1 and dict1["retry_delay"] != "":
                 self.retry_delay = int(dict1["retry_delay"])
             return dict1
 
@@ -247,7 +247,7 @@ class HttpClient(object):
         if self.host in self.soket_dic:
             self.soket_dic[self.host]["socket"].close()
             self.soket_dic.pop(self.host)
-
+ 
     def connect(self, url, kwargs, headers_all, url_previos,
                 type_req, bytes_to_send, transfer_timeout):
         try:
@@ -276,7 +276,7 @@ class HttpClient(object):
                 if self.nonblocking:
                     self.sock.settimeout(0.0)
                     try:
-                        self.sock.connect(addr)
+                        self.sock.connect(addr)                        
                     except socket.error as err:
                         if err.errno != errno.EINPROGRESS:
                             raise
@@ -1040,6 +1040,7 @@ class HttpClient(object):
 
     def sendnonblock(self):
         try:
+            self.host_ip_dic[self.host] = self.sock.getpeername()[0]            
             if type(self.nonblocking_stack[self.send_stack_index]) is bytes:
                 num = self.soket_send(
                     self.nonblocking_stack[
@@ -1088,13 +1089,17 @@ class HttpClient(object):
             raise e
 
         except socket.error as e:
+            self.logger.info(str(e))            
+            if e.errno == 107:
+                # [Errno 107] Transport endpoint is not connected
+                self.logger.info(str(e))
+                return False
             self.logger.error('Send data to ' + str(self.host) + ' error')
             raise
 
         except IndexError as e:
-            self.logger.debug("all data send")
-            if self.proxy is None:
-                self.host_ip_dic[self.host] = self.sock.getpeername()[0]
+            self.logger.debug("all data send")   
+            self.host_ip_dic[self.host] = self.sock.getpeername()[0]         
             return True
 
     def zeroing(self, status):
@@ -1336,7 +1341,7 @@ class HttpClient(object):
                     transfer_timeout=self.transfer_timeout)
 
                 # Connection to socket is OK
-                if response[0]:
+                if response[0]:                    
                     self.logger.debug("Connection to socket is OK")
                     self.logger.info(
                         str(round(time.time() - self.start_time, 3)) +
@@ -1347,7 +1352,7 @@ class HttpClient(object):
                     self.soket_funk(self.url, self.kwargs, self.headers_all,
                                     self.url_previos, self.type_req,
                                     self.bytes_to_send)
-
+                    return False
                 # Connection to socket: ERROR
                 # Block cicle from another iterations
                 if not response[0]:
@@ -1357,7 +1362,9 @@ class HttpClient(object):
                     self.issend = True
                     self.isconnect = True
                     self.isgetipfromhost = True
-
+            
+            #if 
+            #    self.host_ip_dic[self.host] = self.sock.getpeername()[0]
             if (self.isgetipfromhost and
                     self.isconnect and not
                     self.issend and not self.isrecv):
