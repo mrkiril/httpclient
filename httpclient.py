@@ -235,6 +235,7 @@ class HttpClient(object):
 
     def del_sock(self):
         # delete and close this socket
+        self.sock.close()
         key = None
         for k, v in self.soket_dic.items():
             if v["socket"] == self.sock:
@@ -242,7 +243,6 @@ class HttpClient(object):
                 break
         if key is not None:
             self.soket_dic.pop(key)
-            self.sock.close()
 
         if self.host in self.soket_dic:
             self.soket_dic[self.host]["socket"].close()
@@ -250,111 +250,118 @@ class HttpClient(object):
 
     def connect(self, url, kwargs, headers_all, url_previos,
                 type_req, bytes_to_send, transfer_timeout):
-        while True:
-            try:
-                if self.host in self.soket_dic and self.proxy is None:
-                    self.logger.debug('socket exist')
-                    self.sock = self.soket_dic[self.host]["socket"]
-                    self.soket_dic[self.host]["index"] += 1
-                    self.is_f_req = True
+        try:
+            if self.host in self.soket_dic and self.proxy is None:
+                self.logger.debug('socket exist')
+                self.sock = self.soket_dic[self.host]["socket"]
+                self.soket_dic[self.host]["index"] += 1
+                self.is_f_req = True
 
-                if self.host not in self.soket_dic and self.proxy is None:
-                    self.logger.debug('socket does not exist')
-                    self.sock = socket.socket(
-                        socket.AF_INET, socket.SOCK_STREAM)
+            if self.host not in self.soket_dic and self.proxy is None:
+                self.logger.debug('socket does not exist')
+                self.sock = socket.socket(
+                    socket.AF_INET, socket.SOCK_STREAM)
 
-                    if ":" in self.host:
-                        n_host = self.host.split(":")
-                        addr = (n_host[0], int(n_host[1]))
-                    else:
-                        ip = self.ipfromhost(self.host)
-                        if ip is not None:
-                            addr = (ip, 80)
-                            self.logger.debug('Ip from list')
-                        if ip is None:
-                            addr = (self.host, 80)
+                if ":" in self.host:
+                    n_host = self.host.split(":")
+                    addr = (n_host[0], int(n_host[1]))
+                else:
+                    ip = self.ipfromhost(self.host)
+                    if ip is not None:
+                        addr = (ip, 80)
+                        self.logger.debug('Ip from list')
+                    if ip is None:
+                        addr = (self.host, 80)
 
+                if self.nonblocking:
+                    self.sock.settimeout(0.0)
+                    try:
+                        self.sock.connect(addr)
+                    except socket.error as err:
+                        if err.errno != errno.EINPROGRESS:
+                            raise
+
+                if not self.nonblocking:
+                    self.sock.settimeout(self.connect_timeout)
+                    self.sock.connect(addr)
+                    self.sock.settimeout(None)
+                    self.host_ip_dic[self.host] = self.sock.getpeername()[
+                        0]
+
+                self.soket_dic[self.host] = {
+                    "socket": self.sock, "index": 0}
+                self.is_f_req = True
+
+            if self.proxy is not None:
+                is_proxy_exist = False
+                soket_key = None
+                for key, elem in self.soket_dic.items():
+                    if self.proxy[0] == str(
+                            elem["socket"].getpeername()[0]):
+                        is_proxy_exist = True
+                        self.sock = elem["socket"]
+                        soket_key = key
+                        break
+                if not is_proxy_exist:
+                    self.logger.info('Proxy socket does not exist')
+                    self.sock = socket.socket(socket.AF_INET,
+                                              socket.SOCK_STREAM)
+                    addr = (self.proxy[0], self.proxy[1])
+                    self.sock.settimeout(self.connect_timeout)
+                    self.sock.connect(addr)
                     if self.nonblocking:
-                        self.sock.settimeout(0.0)
-                        try:
-                            self.sock.connect(addr)
-                        except socket.error as err:
-                            if err.errno != errno.EINPROGRESS:
-                                raise
-
+                        self.sock.settimeout(0)
                     if not self.nonblocking:
-                        self.sock.settimeout(self.connect_timeout)
-                        self.sock.connect(addr)
                         self.sock.settimeout(None)
-                        self.host_ip_dic[self.host] = self.sock.getpeername()[
-                            0]
+                    self.soket_dic[self.proxy[0]] = (
+                        {"socket": self.sock, "index": 0})
+                    self.is_f_req = True
+                    self.logger.info('Proxy socket is create')
 
-                    self.soket_dic[self.host] = {
-                        "socket": self.sock, "index": 0}
+                if is_proxy_exist:
+                    self.logger.info('Proxy socket exist')
+                    self.sock = self.soket_dic[soket_key]["socket"]
+                    self.soket_dic[soket_key]["index"] += 1
                     self.is_f_req = True
 
-                if self.proxy is not None:
-                    is_proxy_exist = False
-                    soket_key = None
-                    for key, elem in self.soket_dic.items():
-                        if self.proxy[0] == str(
-                                elem["socket"].getpeername()[0]):
-                            is_proxy_exist = True
-                            self.sock = elem["socket"]
-                            soket_key = key
-                            break
-                    if not is_proxy_exist:
-                        self.logger.info('Proxy socket does not exist')
-                        self.sock = socket.socket(socket.AF_INET,
-                                                  socket.SOCK_STREAM)
-                        addr = (self.proxy[0], self.proxy[1])
-                        self.sock.settimeout(self.connect_timeout)
-                        self.sock.connect(addr)
-                        if self.nonblocking:
-                            self.sock.settimeout(0)
-                        if not self.nonblocking:
-                            self.sock.settimeout(None)
-                        self.soket_dic[self.proxy[0]] = (
-                            {"socket": self.sock, "index": 0})
-                        self.is_f_req = True
-                        self.logger.info('Proxy socket is create')
+        except ConnectionError as e:
+            self.logger.error('ConnectionError' + str(e.args))
+            return(False, "", "")
 
-                    if is_proxy_exist:
-                        self.logger.info('Proxy socket exist')
-                        self.sock = self.soket_dic[soket_key]["socket"]
-                        self.soket_dic[soket_key]["index"] += 1
-                        self.is_f_req = True
+        except FileNotFoundError as e:
+            self.logger.error('FileNotFoundError' + str(e.args))
+            self.del_sock()
+            return (False, "", "")
 
-            except ConnectionError as e:
-                self.logger.error('ConnectionError' + str(e.args))
-                return(False, "", "")
+        except socket.timeout as e:
+            self.sock.close()
+            self.logger.error('TimeoutError' + str(e.args))
+            try:
+                self.soket_dic.pop(self.host)
+            except KeyError as e:
+                pass
+            return (False, "")
 
-            except FileNotFoundError as e:
-                self.logger.error('FileNotFoundError' + str(e.args))
-                self.del_sock()
-                return (False, "", "")
+        except BlockingIOError as e:
+            self.logger.error("Resource temporarily unavailable")
+            return(False, "", "")
 
-            except socket.timeout as e:
-                self.sock.close()
-                self.logger.error('TimeoutError' + str(e.args))
-                try:
-                    self.soket_dic.pop(self.host)
-                except KeyError as e:
-                    pass
-                return (False, "")
+        except socket.error as e:
+            self.logger.error('Error Socket. ' + str(e.errno) +
+                              " " + os.strerror(e.errno))
+            self.logger.error("Try connect to " +
+                              str(addr[0]) + ":" + str(addr[1]))
+            self.del_sock()
+            return(False, "", "")
 
-            except BlockingIOError as e:
-                self.logger.error("Resource temporarily unavailable")
-                return(False, "", "")
+        except OSError as e:
+            self.logger.error(
+                'OSError ' + str(e.errno) + " " + os.strerror(e.errno))
+            self.del_sock()
+            return(False, "", "")
 
-            except OSError as e:
-                self.logger.error(
-                    'OSError ' + str(e.errno) + " " + os.strerror(e.errno))
-                self.del_sock()
-                return(False, "", "")
-
-            else:
-                return (True, b"", "")
+        else:
+            return (True, b"", "")
 
     def status_200_300(self,  host_url_and_query, cookie_arr):
         # Find cookies for next iteration
@@ -1077,6 +1084,13 @@ class HttpClient(object):
                         self.file_lock = True
                     return False
 
+        except BlockingIOError as e:
+            raise e
+
+        except socket.error as e:
+            self.logger.error('Send data to ' + str(self.host) + ' error')
+            raise
+
         except IndexError as e:
             self.logger.debug("all data send")
             if self.proxy is None:
@@ -1273,6 +1287,9 @@ class HttpClient(object):
         except BlockingIOError as e:
             raise e
 
+        except socket.error as e:
+            self.logger.error('Recv data from ' + str(self.host) + ' error')
+            raise
         else:
             if self.isbody:
                 return "ok"
@@ -1332,14 +1349,18 @@ class HttpClient(object):
                                     self.bytes_to_send)
 
                 # Connection to socket: ERROR
+                # Block cicle from another iterations
                 if not response[0]:
-                    self.logger.critical("Connection to socket: ERROR")
-                    self.isconnect = False
+                    self.logger.critical(
+                        "Connection " + str(self.host) + ": ERROR")
+                    self.isrecv = True
+                    self.issend = True
+                    self.isconnect = True
+                    self.isgetipfromhost = True
 
             if (self.isgetipfromhost and
                     self.isconnect and not
                     self.issend and not self.isrecv):
-                self.logger.debug("Send mode ...")
                 issend = self.sendnonblock()
                 if issend:
                     self.issend = True
@@ -1363,6 +1384,7 @@ class HttpClient(object):
 
             if self.isrecv:
                 return True
+
         except socket.timeout as e:
             err = e.args[0]
             if err == 'timed out':
@@ -1394,6 +1416,12 @@ class HttpClient(object):
                 # self.logger.info("BlockingIOError")
                 return False
 
+        except socket.error as e:
+            self.logger.error('Error Socket.' + str(e))
+            # self.logger.error('Error Socket. ' + str(e.errno) +
+            #                  " " + os.strerror(e.errno))
+            return True
+
         except SocketFallError as e:
             self.logger.error('SocketFallError, reload socket ...')
             self.del_sock()
@@ -1424,8 +1452,12 @@ class HttpClient(object):
                 self.body = b""
                 page = b""  # Variable which will be returnes(BYTES)
                 start_index = None  # Startindex of message body
-                response = self.connect(url, kwargs, headers_all, url_previos,
-                                        type_req, bytes_to_send,
+
+                response = self.connect(url, kwargs,
+                                        headers_all,
+                                        url_previos,
+                                        type_req,
+                                        bytes_to_send,
                                         transfer_timeout)
                 if response[0]:
                     self.logger.info("Connection to socket is OK")

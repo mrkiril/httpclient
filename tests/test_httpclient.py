@@ -8,8 +8,6 @@ import subprocess
 import multiprocessing
 from httpclient import HttpClient
 from httpclient import HttpErrors
-from httpclient import HtCode
-
 import unittest
 import logging
 import logging.config
@@ -603,7 +601,6 @@ class Test_urllib(unittest.TestCase):
         global_start_time = time.time()
         while True:
             arr_status = [ob.isready() for ob in arr_obj]
-            print(arr_status)
             if False in arr_status:
                 time.sleep(0.05)
                 if time.time() - global_start_time > 3.5:
