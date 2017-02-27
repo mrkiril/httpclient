@@ -251,6 +251,7 @@ class HttpClient(object):
     def connect(self, url, kwargs, headers_all, url_previos,
                 type_req, bytes_to_send, transfer_timeout):
         try:
+            self.logger.debug('Connect mode')
             if self.host in self.soket_dic and self.proxy is None:
                 self.logger.debug('socket exist')
                 self.sock = self.soket_dic[self.host]["socket"]
@@ -276,8 +277,10 @@ class HttpClient(object):
                 if self.nonblocking:
                     self.sock.settimeout(0.0)
                     try:
+                        self.logger.debug('Connect to '+str(addr))
                         self.sock.connect(addr)                        
                     except socket.error as err:
+                        self.logger.debug( str(err))
                         if err.errno != errno.EINPROGRESS:
                             raise
 
@@ -605,25 +608,36 @@ class HttpClient(object):
                     self.soket_send(payload_el.encode())
 
     def soket_recv(self, byte, transfer_timeout):
-        self.sock.settimeout(self.transfer_timeout)
-        response = self.sock.recv(byte)
-        self.sock.settimeout(None)
-        if response == b"" and not self.is_f_req:
-            self.logger.warning("Socket return Zero")
-            return (False, response)
+        try:
+            self.sock.settimeout(self.transfer_timeout)
+            response = self.sock.recv(byte)
+            self.sock.settimeout(None)
+            if response == b"" and not self.is_f_req:
+                self.logger.warning("Socket return Zero")
+                return (False, response)
 
-        if response == b"" and self.is_f_req:
-            self.logger.warning("Socket is fall down")
-            raise SocketFallError("Socket is fall down")
-            return (False, response)
-        self.is_f_req = False
-        return (True, response)
-
+            if response == b"" and self.is_f_req:
+                self.logger.warning("Socket is fall down")
+                raise SocketFallError("Socket is fall down")
+                return (False, response)
+            self.is_f_req = False
+        
+        except socket.error as e:
+            self.logger.error(str(e))
+            raise e
+        else:
+            return (True, response)
+     
     def soket_send(self, q):
-        num = self.sock.send(q)
-        self.req_line += q
-        return num
-
+        try:
+            num = self.sock.send(q)
+            self.req_line += q            
+        except socket.error as e:
+            self.logger.error(str(e))
+            raise
+        else:
+            return num
+        
     def parslink(self, link):
         m_data_link = re.search("https?://([^/]+).*", link, re.DOTALL)
         if ":" in m_data_link.group(1):
@@ -781,7 +795,6 @@ class HttpClient(object):
     def transfer_encodong_nonblocking(self):
         self.logger.debug("Chunked  mode")
         page_bytes = self.data[self.start_index:]
-        self.logger.debug("In loop")
         page_bytes = self.data[self.start_index:]
         if "on_progress" in self.kwargs:
             on_progress = self.kwargs["on_progress"]
@@ -801,7 +814,7 @@ class HttpClient(object):
             self.data += response
             return(False, b"")
 
-        self.logger.debug("m-len: " + str(m_len is not None))
+        self.logger.debug("Find mini_len: " + str(m_len is not None))
         len_len = len(m_len.group())        # len() of LEN  +\r\n
         byte_len = int(m_len.group(2), 16)
 
@@ -1040,11 +1053,12 @@ class HttpClient(object):
 
     def sendnonblock(self):
         try:
-            self.host_ip_dic[self.host] = self.sock.getpeername()[0]            
+            self.logger.debug('Send mode')            
             if type(self.nonblocking_stack[self.send_stack_index]) is bytes:
                 num = self.soket_send(
                     self.nonblocking_stack[
                         self.send_stack_index][self.send_byte_index:])
+                print("NUM: ", num)
                 self.send_byte_index += num
                 if self.send_byte_index == len(
                         self.nonblocking_stack[self.send_stack_index]):
@@ -1086,10 +1100,12 @@ class HttpClient(object):
                     return False
 
         except BlockingIOError as e:
-            raise e
+            self.logger.error(str(e))
+            raise
 
         except socket.error as e:
-            self.logger.info(str(e))            
+            self.logger.error(str(e))
+            print(self.sock)
             if e.errno == 107:
                 # [Errno 107] Transport endpoint is not connected
                 self.logger.info(str(e))
@@ -1258,7 +1274,7 @@ class HttpClient(object):
                             answer = self.transfer_encodong_nonblocking()
                             response, self.body = answer
                         except BlockingIOError as e:
-                            self.logger.debug("Transfer-Encoding ERROR")
+                            self.logger.debug(str(e))                            
                             raise e
 
                         else:
@@ -1411,7 +1427,7 @@ class HttpClient(object):
             self.issend = True
             self.isconnect = True
             self.isgetipfromhost = True
-            return True
+            return None
 
         except BlockingIOError as e:
             # [Errno 11] Resource temporarily unavailable
@@ -1425,9 +1441,9 @@ class HttpClient(object):
 
         except socket.error as e:
             self.logger.error('Error Socket.' + str(e))
-            # self.logger.error('Error Socket. ' + str(e.errno) +
-            #                  " " + os.strerror(e.errno))
-            return True
+            self.logger.error('Error Socket. ' + str(e.errno) +
+                              " " + os.strerror(e.errno))
+            return None
 
         except SocketFallError as e:
             self.logger.error('SocketFallError, reload socket ...')
