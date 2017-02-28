@@ -14,6 +14,7 @@ import os
 import io
 import sys
 import time
+import urllib
 import configparser
 
 
@@ -1106,8 +1107,9 @@ class HttpClient(object):
         except socket.error as e:
             self.logger.error(str(e))
             print(self.sock)
-            if e.errno == 107:
+            if e.errno in [107, 57]:
                 # [Errno 107] Transport endpoint is not connected
+                # [Errno 57] Socket is not connected
                 self.logger.info(str(e))
                 return False
             self.logger.error('Send data to ' + str(self.host) + ' error')
