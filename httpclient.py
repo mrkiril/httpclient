@@ -248,7 +248,11 @@ class HttpClient(object):
         if self.host in self.soket_dic:
             self.soket_dic[self.host]["socket"].close()
             self.soket_dic.pop(self.host)
- 
+        
+        if self.host in self.host_ip_dic:
+            self.host_ip_dic.pop(self.host)
+
+
     def connect(self, url, kwargs, headers_all, url_previos,
                 type_req, bytes_to_send, transfer_timeout):
         try:
@@ -630,7 +634,7 @@ class HttpClient(object):
             return (True, response)
      
     def soket_send(self, q):
-        try:
+        try: 
             num = self.sock.send(q)
             self.req_line += q            
         except socket.error as e:
@@ -1059,7 +1063,6 @@ class HttpClient(object):
                 num = self.soket_send(
                     self.nonblocking_stack[
                         self.send_stack_index][self.send_byte_index:])
-                print("NUM: ", num)
                 self.send_byte_index += num
                 if self.send_byte_index == len(
                         self.nonblocking_stack[self.send_stack_index]):
@@ -1116,8 +1119,9 @@ class HttpClient(object):
             raise
 
         except IndexError as e:
-            self.logger.debug("all data send")   
-            self.host_ip_dic[self.host] = self.sock.getpeername()[0]         
+            self.logger.debug("all data send") 
+            if not self.proxy:
+                self.host_ip_dic[self.host] = self.sock.getpeername()[0]         
             return True
 
     def zeroing(self, status):
@@ -1327,23 +1331,27 @@ class HttpClient(object):
         """
         try:
             if not self.isgetipfromhost and not self.isrecv:
-                if ":" in self.host:
-                    n_host = self.host.split(":")
-                    self.host_ip_dic[str(self.host)] = n_host[1]
+                if not self.proxy:
+                    if ":" in self.host:
+                        n_host = self.host.split(":")
+                        self.host_ip_dic[str(self.host)] = n_host[1]
+                        self.isgetipfromhost = True
+
+                    elif str(self.host) not in self.host_ip_dic:
+                        self.logger.info("Take ip from host  " + str(self.host))
+                        ip = None
+                        ip = socket.gethostbyname(str(self.host))
+                        if ip:
+                            self.host_ip_dic[str(self.host)] = ip
+                            self.isgetipfromhost = True
+                        else:
+                            self.logger.critical("Connection to dns: ERROR")
+                            self.isgetipfromhost = False
+                    else:
+                        self.isgetipfromhost = True
+                if self.proxy:                    
                     self.isgetipfromhost = True
 
-                elif str(self.host) not in self.host_ip_dic:
-                    self.logger.info("Take ip from host  " + str(self.host))
-                    ip = None
-                    ip = socket.gethostbyname(str(self.host))
-                    if ip:
-                        self.host_ip_dic[str(self.host)] = ip
-                        self.isgetipfromhost = True
-                    else:
-                        self.logger.critical("Connection to dns: ERROR")
-                        self.isgetipfromhost = False
-                else:
-                    self.isgetipfromhost = True
 
             if (self.isgetipfromhost and not
                     self.isconnect and not self.isrecv):
