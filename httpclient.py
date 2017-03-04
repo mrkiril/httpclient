@@ -669,7 +669,7 @@ class HttpClient(object):
                 cookies_list.append(bl_patt[1])
             else:
                 headers[bl_patt[0].lower()] = bl_patt[1].lower()
-        
+
         headers["set-cookie"] = cookies_list
         return (headers, cookies_list)
 
@@ -1056,7 +1056,6 @@ class HttpClient(object):
                 return charset.group(1)
         return None
 
-
     def sendnonblock(self):
         try:
             self.logger.debug('Send mode')
@@ -1401,12 +1400,20 @@ class HttpClient(object):
             if (self.isgetipfromhost and self.isconnect and
                     self.issend and not self.isrecv):
                 describe = self.recvnonblock()
-                if describe in ["ok", "error"]:
+                if describe == "ok":
                     self.logger.debug("isrecv: " + describe + " go to exit")
                     self.logger.info(
                         str(round(time.time() - self.start_time, 3)) +
                         "  time to recv " + self.host)
                     self.isrecv = True
+
+                elif describe == "error":
+                    self.logger.error("isrecv: " + describe + " go to exit")
+                    self.logger.error(
+                        str(round(time.time() - self.start_time, 3)) +
+                        "  time to recv " + self.host)
+                    self.isrecv = None
+
                 else:
                     self.isrecv = False
 

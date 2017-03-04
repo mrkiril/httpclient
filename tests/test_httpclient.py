@@ -50,8 +50,7 @@ class Test_urllib(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_test(self):
-        #'''
+    def test_test(self):        
         print("\r\nGET\r\n")
 
         res = self.client.get('http://www.google.com.ua/search?q=шекель')
