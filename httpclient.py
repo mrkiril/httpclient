@@ -791,75 +791,58 @@ class HttpClient(object):
 
     def transfer_encodong_nonblocking(self):
         self.logger.debug("Chunked  mode")
-        page_bytes = self.data[self.start_index:]
-        page_bytes = self.data[self.start_index:]
+        page_bytes = self.data[self.start_index:]        
         if "on_progress" in self.kwargs:
             on_progress = self.kwargs["on_progress"]
             prog_status = on_progress(len(self.page_str), None)
             if not prog_status:
                 return (True, self.page_str)
-
-        if len(page_bytes[self.chunked_index:]) < 7:
-            response = self.sock.recv(2048)
-            page_bytes = self.data[self.start_index:]
-            self.data += response
-
-        m_len = re.search(b"(\r\n)?(.+?)\r\n", page_bytes[self.chunked_index:])
-        if m_len is None:
-            response = self.sock.recv(2048)
-            page_bytes = self.data[self.start_index:]
-            self.data += response
-            return(False, b"")
-
-        self.logger.debug("Find mini_len: " + str(m_len is not None))
-        len_len = len(m_len.group())        # len() of LEN  +\r\n
-        byte_len = int(m_len.group(2), 16)
-
-        while len(page_bytes[self.chunked_index + len_len:]) < byte_len:
-            response = self.sock.recv(byte_len)
-            self.data += response
-            page_bytes = self.data[self.start_index:]
-
-        from_ = self.chunked_index + len_len
-        to_ = self.chunked_index + len_len + byte_len
-        this_page = page_bytes[from_: to_]
-        self.page_str += this_page
-
-        # Navigates to the next iteration
-        self.chunked_index += len_len + byte_len
-        if "output" in self.kwargs:
-            if not self.firstin:
-                if self.max_size is None:
-                    with open(self.kwargs["output"], "ab") as fp:
-                        fp.write(this_page)
-
-                if self.max_size is not None:
-                    path = self.kwargs["output"]
-                    file_size = os.path.getsize(path)
-                    with open(self.kwargs["output"], "ab") as fp:
-                        if file_size + len(this_page) < self.max_size:
+        self.data += self.sock.recv(65536)
+        page_bytes = self.data[self.start_index:]
+        while True:
+            m_len = re.match(b"(\r\n)?(.+?)\r\n", page_bytes[self.chunked_index:])
+            if m_len is None:
+                return(False, b"")
+            self.logger.debug("Find mini_len: " + str(m_len is not None))
+            len_len = len(m_len.group())        # len() of LEN  +\r\n
+            byte_len = int(m_len.group(2), 16)
+            from_ = self.chunked_index + len_len
+            to_ = self.chunked_index + len_len + byte_len
+            this_page = page_bytes[from_: to_]            
+            self.logger.debug("mini len: "+str(len(this_page))+" of "+str(byte_len))
+            if len(this_page) != byte_len and byte_len != 0:
+                return(False, b"")
+            self.page_str += this_page            
+            self.chunked_index += len_len + byte_len        
+            if "output" in self.kwargs:
+                if not self.firstin:
+                    if self.max_size is None:
+                        with open(self.kwargs["output"], "ab") as fp:
                             fp.write(this_page)
 
-                        else:
-                            part_this_page = self.max_size - file_size
-                            fp.write(this_page[0:part_this_page])
-                            byte_len = 0
+                    if self.max_size is not None:
+                        path = self.kwargs["output"]
+                        file_size = os.path.getsize(path)
+                        with open(self.kwargs["output"], "ab") as fp:
+                            if file_size + len(this_page) < self.max_size:
+                                fp.write(this_page)
 
-            if self.firstin:
-                if "output" in self.kwargs:
-                    with open(self.kwargs["output"], "wb") as fp:
-                        fp.write(page_bytes)
-                self.firstin = False
+                            else:
+                                part_this_page = self.max_size - file_size
+                                fp.write(this_page[0:part_this_page])
+                                byte_len = 0
 
-        if self.max_size is not None:
-            if len(self.page_str) > int(self.max_size):
-                return (True, self.page_str[0: self.max_size])
+                if self.firstin:
+                    if "output" in self.kwargs:
+                        with open(self.kwargs["output"], "wb") as fp:
+                            fp.write(page_bytes)
+                    self.firstin = False
 
-        if byte_len == 0:
-            return (True, self.page_str)
-
-        if byte_len != 0:
-            return (False, b"")
+            if self.max_size is not None:
+                if len(self.page_str) > int(self.max_size):
+                    return (True, self.page_str[0: self.max_size])
+            if byte_len == 0:
+                return (True, self.page_str)
 
     def transfer_encodong(self, page_bytes,
                           transfer_timeout, kwargs, max_size):
