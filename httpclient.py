@@ -248,10 +248,9 @@ class HttpClient(object):
         if self.host in self.soket_dic:
             self.soket_dic[self.host]["socket"].close()
             self.soket_dic.pop(self.host)
-        
+
         if self.host in self.host_ip_dic:
             self.host_ip_dic.pop(self.host)
-
 
     def connect(self, url, kwargs, headers_all, url_previos,
                 type_req, bytes_to_send, transfer_timeout):
@@ -282,10 +281,10 @@ class HttpClient(object):
                 if self.nonblocking:
                     self.sock.settimeout(0.0)
                     try:
-                        self.logger.debug('Connect to '+str(addr))
-                        self.sock.connect(addr)                        
+                        self.logger.debug('Connect to ' + str(addr))
+                        self.sock.connect(addr)
                     except socket.error as err:
-                        self.logger.debug( str(err))
+                        self.logger.debug(str(err))
                         if err.errno != errno.EINPROGRESS:
                             raise
 
@@ -626,23 +625,23 @@ class HttpClient(object):
                 raise SocketFallError("Socket is fall down")
                 return (False, response)
             self.is_f_req = False
-        
+
         except socket.error as e:
             self.logger.error(str(e))
             raise e
         else:
             return (True, response)
-     
+
     def soket_send(self, q):
-        try: 
+        try:
             num = self.sock.send(q)
-            self.req_line += q            
+            self.req_line += q
         except socket.error as e:
             self.logger.error(str(e))
             raise
         else:
             return num
-        
+
     def parslink(self, link):
         m_data_link = re.search("https?://([^/]+).*", link, re.DOTALL)
         if ":" in m_data_link.group(1):
@@ -658,47 +657,40 @@ class HttpClient(object):
         return (url, start_host, start_cook_pattern)
 
     def search_headers(self,  all_headers):
-        header = {}
-        # get out first rows
-        all_headers = all_headers[int(re.search(".+?\r\n",
-                                                all_headers).span()[1]):]
-        # Parsing headers
-        summ = ""
-        ind = 0
         cookies_list = []
-        for i in range(len(all_headers[:-2])):
-            summ += all_headers[i]
-
-            if summ.endswith("\r\n"):
-                for_dict = re.search("(.+?): (.+)", summ[:-2])
-                if for_dict.group(1) == "Set-Cookie":
-                    # array of all cookies in Set-Cookie
-                    cookies_list.append(for_dict.group(2))
-                else:
-                    header[for_dict.group(1)] = for_dict.group(2)
-
-                summ = ""
-        header["Set-Cookie"] = cookies_list
-        return (header, cookies_list)
+        headers = {}
+        all_headers = all_headers[
+            int(re.search(".+?\r\n", all_headers).span()[1]):-4]
+        summ = ""
+        hblock = all_headers.split("\r\n")
+        for bl in hblock:
+            bl_patt = bl.split(": ")
+            if bl_patt[0] == "set-cookie":
+                cookies_list.append(bl_patt[1])
+            else:
+                headers[bl_patt[0].lower()] = bl_patt[1].lower()
+        
+        headers["set-cookie"] = cookies_list
+        return (headers, cookies_list)
 
     def content_length_nonblocking(self):
         self.logger.debug("Conent len mode")
-        self.logger.debug("len is: " + str(self.headers["Content-Length"]))
+        self.logger.debug("len is: " + str(self.headers["content-length"]))
         page_bytes = self.data[self.start_index:]
         if "on_progress" in self.kwargs:
             on_progress = self.kwargs["on_progress"]
             prog_status = on_progress(
-                len(page_bytes), int(self.headers["Content-Length"]))
+                len(page_bytes), int(self.headers["content-length"]))
             if not prog_status:
                 if (self.max_size is not None and
                         self.max_size < len(page_bytes)):
                     return(True, self.page[0:self.max_size])
                 return (True, self.page)
 
-        if int(self.headers["Content-Length"]) <= 0:
+        if int(self.headers["content-length"]) <= 0:
             return (True, self.page)
 
-        if int(self.headers["Content-Length"]) > 0:
+        if int(self.headers["content-length"]) > 0:
             if self.firstin:
                 if "output" in self.kwargs:
                     with open(self.kwargs["output"], "wb") as fp:
@@ -712,7 +704,7 @@ class HttpClient(object):
             if self.max_size is not None and self.max_size < len(page_bytes):
                 return(True, page_bytes[0:self.max_size])
 
-            if len(page_bytes) < int(self.headers["Content-Length"]):
+            if len(page_bytes) < int(self.headers["content-length"]):
                 response = self.sock.recv(65536)
                 if "output" in self.kwargs:
                     with open(self.kwargs["output"], "ab") as fp:
@@ -729,9 +721,9 @@ class HttpClient(object):
                 page_bytes = self.data[self.start_index:]
                 self.logger.debug("Now is body data: " + str(len(page_bytes)))
                 self.logger.debug("content-lenght:" +
-                                  str(self.headers["Content-Length"]))
+                                  str(self.headers["content-length"]))
 
-                if len(page_bytes) >= int(self.headers["Content-Length"]):
+                if len(page_bytes) >= int(self.headers["content-length"]):
                     if "output" in self.kwargs:
                         # logger
                         self.logger.info("Download to file is complited.")
@@ -742,7 +734,7 @@ class HttpClient(object):
                     return (True, self.page)
                 return (False, b"")
 
-            if len(page_bytes) >= int(self.headers["Content-Length"]):
+            if len(page_bytes) >= int(self.headers["content-length"]):
                 if "output" in self.kwargs:
                     self.logger.info("Download to file is complited.")
                 self.page += self.data[self.start_index:]
@@ -753,7 +745,7 @@ class HttpClient(object):
 
     def content_length(self, page_bytes,
                        transfer_timeout, kwargs, max_size):
-        if int(self.headers["Content-Length"]) > 0:
+        if int(self.headers["content-length"]) > 0:
             if "output" in kwargs:
                 with open(kwargs["output"], "wb") as fp:
                     if max_size is not None and max_size < len(page_bytes):
@@ -762,7 +754,7 @@ class HttpClient(object):
                         fp.write(page_bytes)
 
             while True:
-                if len(page_bytes) >= int(self.headers["Content-Length"]):
+                if len(page_bytes) >= int(self.headers["content-length"]):
                     if "output" in kwargs:
                         self.logger.info("Download to file is complited.")
                     break
@@ -792,7 +784,7 @@ class HttpClient(object):
                     on_progress = kwargs["on_progress"]
                     prog_status = on_progress(
                         len(page_bytes),
-                        int(self.headers["Content-Length"]))
+                        int(self.headers["content-length"]))
                     if not prog_status:
                         break
         return (True, page_bytes)
@@ -995,7 +987,7 @@ class HttpClient(object):
         if "on_progress" in kwargs:
             on_progress = kwargs["on_progress"]
             prog_status = on_progress(len(page_bytes),
-                                      int(self.headers["Content-Length"]))
+                                      int(self.headers["content-length"]))
             if not prog_status:
                 if self.encoding is None:
                     return (True, b"")
@@ -1005,7 +997,7 @@ class HttpClient(object):
             if "on_progress" in kwargs:
                 on_progress = kwargs["on_progress"]
                 prog_status = on_progress(len(page_bytes),
-                                          int(self.headers["Content-Length"]))
+                                          int(self.headers["content-length"]))
                 if not prog_status:
                     return (True, page_bytes)
 
@@ -1056,9 +1048,18 @@ class HttpClient(object):
                 break
         return "; ".join([k + "=" + v for k, v in cook_arr.items()])
 
+    def find_charset(self, headers):
+        if "content-type" in headers:
+            self.logger.debug(headers["content-type"])
+            charset = re.search("charset=(.*);?", headers["content-type"])
+            if charset is not None:
+                return charset.group(1)
+        return None
+
+
     def sendnonblock(self):
         try:
-            self.logger.debug('Send mode')            
+            self.logger.debug('Send mode')
             if type(self.nonblocking_stack[self.send_stack_index]) is bytes:
                 num = self.soket_send(
                     self.nonblocking_stack[
@@ -1119,9 +1120,9 @@ class HttpClient(object):
             raise
 
         except IndexError as e:
-            self.logger.debug("all data send") 
+            self.logger.debug("all data send")
             if not self.proxy:
-                self.host_ip_dic[self.host] = self.sock.getpeername()[0]         
+                self.host_ip_dic[self.host] = self.sock.getpeername()[0]
             return True
 
     def zeroing(self, status):
@@ -1135,7 +1136,7 @@ class HttpClient(object):
         self.send_byte_index = 0
         self.data = b""
         if self.status_code[0] == "3":
-            cookies_url = self.status_200_300(self.headers["Location"], {})
+            cookies_url = self.status_200_300(self.headers["location"], {})
             self.url_previos = self.url    # url for Referrer
             self.url = cookies_url[1]    # URL for next step
             # COOKIE for next step
@@ -1173,14 +1174,8 @@ class HttpClient(object):
                     self.start_index = m_headers.span()[1]
                     cookies_list = headers_and_startindex[1]
                     self.headers = headers_and_startindex[0]
+                    self.encoding = self.find_charset(self.headers)
 
-                self.encoding = None
-                if "Content-Type" in self.headers:
-                    charset = re.search("charset=(.*);?",
-                                        self.headers["Content-Type"])
-
-                    if charset is not None:
-                        self.encoding = charset.group(1)
                 # cookies_list string with cookies (not parsing).
                 self.cookies_parsing_funk(cookies_list, self.host)
 
@@ -1222,7 +1217,7 @@ class HttpClient(object):
                         return "error"
 
                     if self.status_code[0] == "3":
-                        if "Location" in self.headers:
+                        if "location" in self.headers:
                             if self.raise_on_error:
                                 raise HttpErrors(self.status_code)
                             self.isgetipfromhost = False
@@ -1236,7 +1231,7 @@ class HttpClient(object):
                             self.data = b""
 
                             cookies_url = self.status_200_300(
-                                self.headers["Location"], {})
+                                self.headers["location"], {})
                             self.url_previos = self.url    # url for Referrer
                             self.url = cookies_url[1]    # URL for next step
                             # COOKIE for next step
@@ -1260,7 +1255,7 @@ class HttpClient(object):
                     self.isbody = True
 
                 if not self.type_req == "HEAD":
-                    if "Content-Length" in self.headers:
+                    if "content-length" in self.headers:
                         self.logger.debug("Type of download: Content-Length")
                         response, self.body = self.content_length_nonblocking()
                         if response:
@@ -1273,14 +1268,14 @@ class HttpClient(object):
                                 "Content Len: we need more iter...")
                             return "continue"
 
-                    if "Transfer-Encoding" in self.headers:
+                    if "transfer-encoding" in self.headers:
                         self.logger.debug(
                             "Type of download: Transfer-Encoding")
                         try:
                             answer = self.transfer_encodong_nonblocking()
                             response, self.body = answer
                         except BlockingIOError as e:
-                            self.logger.debug(str(e))                            
+                            self.logger.debug(str(e))
                             raise e
 
                         else:
@@ -1294,8 +1289,8 @@ class HttpClient(object):
                                     "Transfer-Encoding: we need more iter...")
                                 return "continue"
 
-                    if ("Transfer-Encoding" not in self.headers and
-                            "Content-Length" not in self.headers):
+                    if ("transfer-encoding" not in self.headers and
+                            "content-length" not in self.headers):
                         self.logger.debug("Type of download: Connection_close")
                         answer = self.connection_close_nonblocking()
                         response, self.body = answer
@@ -1338,7 +1333,8 @@ class HttpClient(object):
                         self.isgetipfromhost = True
 
                     elif str(self.host) not in self.host_ip_dic:
-                        self.logger.info("Take ip from host  " + str(self.host))
+                        self.logger.info(
+                            "Take ip from host  " + str(self.host))
                         ip = None
                         ip = socket.gethostbyname(str(self.host))
                         if ip:
@@ -1349,9 +1345,8 @@ class HttpClient(object):
                             self.isgetipfromhost = False
                     else:
                         self.isgetipfromhost = True
-                if self.proxy:                    
+                if self.proxy:
                     self.isgetipfromhost = True
-
 
             if (self.isgetipfromhost and not
                     self.isconnect and not self.isrecv):
@@ -1367,7 +1362,7 @@ class HttpClient(object):
                     transfer_timeout=self.transfer_timeout)
 
                 # Connection to socket is OK
-                if response[0]:                    
+                if response[0]:
                     self.logger.debug("Connection to socket is OK")
                     self.logger.info(
                         str(round(time.time() - self.start_time, 3)) +
@@ -1388,8 +1383,8 @@ class HttpClient(object):
                     self.issend = True
                     self.isconnect = True
                     self.isgetipfromhost = True
-            
-            #if 
+
+            # if
             #    self.host_ip_dic[self.host] = self.sock.getpeername()[0]
             if (self.isgetipfromhost and
                     self.isconnect and not
@@ -1542,13 +1537,7 @@ class HttpClient(object):
                     start_index = m_headers.span()[1]
                     cookies_list = headers_and_startindex[1]
                     self.headers = headers_and_startindex[0]
-                    self.encoding = None
-                    if "Content-Type" in self.headers:
-                        charset = re.search("charset=(.*);?",
-                                            self.headers["Content-Type"])
-
-                        if charset is not None:
-                            self.encoding = charset.group(1)
+                    self.encoding = self.find_charset(self.headers)
                     # cookies_list string with cookies (not parsinf).
                     self.cookies_parsing_funk(cookies_list, self.host)
                     if "on_headers" in kwargs:
@@ -1586,7 +1575,7 @@ class HttpClient(object):
                         if not type_req == "HEAD":
                             self.response_str = this_stack_bytes[:start_index]
                             # Content-Length
-                            if "Content-Length" in self.headers:
+                            if "content-length" in self.headers:
                                 self.logger.info(
                                     "Type of download: Content-Length")
                                 response = self.content_length(
@@ -1603,7 +1592,7 @@ class HttpClient(object):
                                     break
                                 self.body = page
 
-                            if "Transfer-Encoding" in self.headers:
+                            if "transfer-encoding" in self.headers:
                                 self.logger.info(
                                     "Type of download: Transfer-Encoding")
                                 response = self.transfer_encodong(
@@ -1621,8 +1610,8 @@ class HttpClient(object):
                                 self.body = page
 
                             # Conection Closed
-                            if ("Transfer-Encoding" not in self.headers and
-                                    "Content-Length" not in self.headers):
+                            if ("transfer-encoding" not in self.headers and
+                                    "content-length" not in self.headers):
                                 # logger
                                 self.logger.info(
                                     "Type of download: Connection_close")
@@ -1650,14 +1639,14 @@ class HttpClient(object):
                             self.logger.info("GO TO >>>>>>>>>>> EXIT")
 
                         if self.status_code[0] == "3":
-                            if "Location" in self.headers:
+                            if "location" in self.headers:
                                 self.logger.info("Status code: " +
                                                  str(self.status_code))
                                 self.logger.info("REDIRECT TO >>>" +
-                                                 str(self.headers["Location"]))
+                                                 str(self.headers["location"]))
 
                                 cookies_url = self.status_200_300(
-                                    self.headers["Location"], {})
+                                    self.headers["location"], {})
                                 url_previos = url       # url for Referrer
                                 url = cookies_url[1]    # URL for next step
                                 # COOKIE for next step

@@ -51,7 +51,11 @@ class Test_urllib(unittest.TestCase):
         pass
 
     def test_test(self):
+        #'''
         print("\r\nGET\r\n")
+
+        res = self.client.get('http://www.google.com.ua/search?q=шекель')
+
         # звичайтий запит перевірка статус кода
         # запис до файла
         # та багато запитів на гугл, перевірка відправки параметрів запиту
@@ -64,17 +68,12 @@ class Test_urllib(unittest.TestCase):
         self.assertRegex(res.body, b"<html")
         self.assertRegex(res.body, b"</html>")
 
-        lists = ["Barak+Obama", "Vladimir+Putin",
-                 "fransua+cluzet", "Alan+Rickman",
-                 "Taylor+Momsen", "kurt+cobain", "johnny+depp"]
+        res = self.client.get('http://httpbin.org/get',
+                              params={'q': "lalka", 'start': '10'},
+                              output=os.path.join(self.file_path,
+                                                  "socket_page.html"))
 
-        for i in lists:
-            res = self.client.get('http://httpbin.org/get',
-                                  params={'q': i, 'start': '10'},
-                                  output=os.path.join(self.file_path,
-                                                      "socket_page.html"))
-
-            self.assertEqual(res.status_code, "200")
+        self.assertEqual(res.status_code, "200")
 
         # перевірка роботи max_size
         # якщо max_size більше ніж розмір сторінки
@@ -334,6 +333,7 @@ class Test_urllib(unittest.TestCase):
         # Неблокуючий режим для GET
         # З кукі, та хедерами
         # та набором параметрів
+        start_time = time.time()
         payload = {'q': "Trump", 'start': '10'}
         res1 = self.client.get("http://httpbin.org/get",
                                params=payload,
@@ -350,7 +350,7 @@ class Test_urllib(unittest.TestCase):
         while True:
             arr_status = [ob.isready() for ob in arr_obj]
             if False in arr_status:
-                time.sleep(0.05)
+                time.sleep(0.005)
                 if time.time() - global_start_time > 3.5:
                     break
                 if time.time() - global_start_time > 0.9:
@@ -369,6 +369,8 @@ class Test_urllib(unittest.TestCase):
             self.assertRegex(res.body, b'"X-From": "UAUA"')
             self.assertEqual(res.status_code, "200")
 
+        print(time.time() - start_time)
+        
         # Неблокуючий режим для GET
         # таймаут відправки данних
         payload = {'q': "Trump", 'start': '10'}
@@ -444,7 +446,7 @@ class Test_urllib(unittest.TestCase):
 
         path = os.path.join(self.file_path, "socket_page_1.html")
         self.assertEqual(str(os.path.getsize(path)), arr_obj[
-                         0].headers["Content-Length"])
+                         0].headers["content-length"])
 
         # проксі в неблокуючому режимі
         # з аутентифікацією
@@ -487,6 +489,7 @@ class Test_urllib(unittest.TestCase):
         # Обмеження кількості повторних запитів
         # при 5хх помилкахсервера
         #
+
         res1 = self.client.get("http://httpbin.org/status/502",
                                retry=1,
                                nonblocking=True)
@@ -703,10 +706,10 @@ class Test_urllib(unittest.TestCase):
 
         path = os.path.join(self.file_path, "socket_page_1.html")
         self.assertEqual(os.path.getsize(path), int(
-            arr_obj[0].headers["Content-Length"]))
+            arr_obj[0].headers["content-length"]))
         path = os.path.join(self.file_path, "socket_page_2.html")
         self.assertEqual(os.path.getsize(path), int(
-            arr_obj[1].headers["Content-Length"]))
+            arr_obj[1].headers["content-length"]))
 
         # перевірка відправки файла
         # та порівняння контрольних сум
