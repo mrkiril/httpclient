@@ -372,6 +372,8 @@ class HttpClient(object):
 
     def status_200_300(self,  host_url_and_query, cookie_arr):
         # Find cookies for next iteration
+        if self.host not in host_url_and_query:
+            host_url_and_query = self.host + host_url_and_query
         m_location = re.search("(\w+://)?(([^/]+).*)", host_url_and_query)
         new_Host_url_and_query = m_location.group(2)
         new_Host = m_location.group(3)
@@ -664,11 +666,11 @@ class HttpClient(object):
         summ = ""
         hblock = all_headers.split("\r\n")
         for bl in hblock:
-            bl_patt = bl.split(": ")
+            bl_patt = bl.lower().split(": ")
             if bl_patt[0] == "set-cookie":
                 cookies_list.append(bl_patt[1])
             else:
-                headers[bl_patt[0].lower()] = bl_patt[1].lower()
+                headers[bl_patt[0]] = bl_patt[1]
 
         headers["set-cookie"] = cookies_list
         return (headers, cookies_list)
@@ -791,7 +793,7 @@ class HttpClient(object):
 
     def transfer_encodong_nonblocking(self):
         self.logger.debug("Chunked  mode")
-        page_bytes = self.data[self.start_index:]        
+        page_bytes = self.data[self.start_index:]
         if "on_progress" in self.kwargs:
             on_progress = self.kwargs["on_progress"]
             prog_status = on_progress(len(self.page_str), None)
@@ -800,7 +802,8 @@ class HttpClient(object):
         self.data += self.sock.recv(65536)
         page_bytes = self.data[self.start_index:]
         while True:
-            m_len = re.match(b"(\r\n)?(.+?)\r\n", page_bytes[self.chunked_index:])
+            m_len = re.match(b"(\r\n)?(.+?)\r\n",
+                             page_bytes[self.chunked_index:])
             if m_len is None:
                 return(False, b"")
             self.logger.debug("Find mini_len: " + str(m_len is not None))
@@ -808,12 +811,13 @@ class HttpClient(object):
             byte_len = int(m_len.group(2), 16)
             from_ = self.chunked_index + len_len
             to_ = self.chunked_index + len_len + byte_len
-            this_page = page_bytes[from_: to_]            
-            self.logger.debug("mini len: "+str(len(this_page))+" of "+str(byte_len))
+            this_page = page_bytes[from_: to_]
+            self.logger.debug(
+                "mini len: " + str(len(this_page)) + " of " + str(byte_len))
             if len(this_page) != byte_len and byte_len != 0:
                 return(False, b"")
-            self.page_str += this_page            
-            self.chunked_index += len_len + byte_len        
+            self.page_str += this_page
+            self.chunked_index += len_len + byte_len
             if "output" in self.kwargs:
                 if not self.firstin:
                     if self.max_size is None:
@@ -1092,7 +1096,6 @@ class HttpClient(object):
 
         except socket.error as e:
             self.logger.error(str(e))
-            print(self.sock)
             if e.errno in [107, 57]:
                 # [Errno 107] Transport endpoint is not connected
                 # [Errno 57] Socket is not connected
@@ -1308,7 +1311,7 @@ class HttpClient(object):
         need to check the status of preparedness request
         """
         try:
-            self.logger.debug(self.host+" IS READY ?")
+            self.logger.debug(self.host + " IS READY ?")
             if not self.isgetipfromhost and not self.isrecv:
                 if not self.proxy:
                     if ":" in self.host:
@@ -1697,8 +1700,12 @@ class HttpClient(object):
 
             except ConnectionError as e:
                 self.logger.error('ConnectionError: ' + str(e.args))
-                self.del_sock()
-                return self
+                if self.soket_dic[self.host]["index"] > 2:
+                    self.del_sock()
+                    return self
+                self.soket_dic.pop(self.host)
+                self.sock.close()
+                continue
 
             except socket.timeout as e:
                 self.sock.close()
