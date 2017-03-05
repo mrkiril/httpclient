@@ -1289,6 +1289,7 @@ class HttpClient(object):
                 return "ok"
 
         except BlockingIOError as e:
+            self.logger.debug("Blocking recv")
             raise e
 
         except socket.error as e:
@@ -1307,6 +1308,7 @@ class HttpClient(object):
         need to check the status of preparedness request
         """
         try:
+            self.logger.debug(self.host+" IS READY ?")
             if not self.isgetipfromhost and not self.isrecv:
                 if not self.proxy:
                     if ":" in self.host:
