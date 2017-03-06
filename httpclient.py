@@ -14,6 +14,7 @@ import os
 import io
 import sys
 import time
+import datetime
 import urllib
 import configparser
 
@@ -415,24 +416,31 @@ class HttpClient(object):
                 domain = "." + start_host
 
             if "domain" in temp_dick:
-                if "domain" in temp_dick:
-                    domain = temp_dick.pop("domain")
-                else:
-                    domain = temp_dick.pop("Domain")
+                domain = temp_dick.pop("domain")
+
             # PATH
             if "path" not in temp_dick:
                 params["path"] = "/"
 
             if "path" in temp_dick:
-                if "path" in temp_dick:
-                    params["path"] = temp_dick.pop("path")
+                params["path"] = temp_dick.pop("path")
 
             # EXPIRES
             if "expires" not in temp_dick:
                 params["expires"] = None
             if "expires" in temp_dick:
-                if "expires" in temp_dick:
-                    params["expires"] = temp_dick.pop("expires")
+                params["expires"] = temp_dick.pop("expires")
+                datetime_object = datetime.datetime.strptime(
+                    params["expires"], '%A, %d-%b-%Y %H:%M:%S GMT')
+                self.logger.debug("DATE TIME COOKIES " + str(datetime_object))
+                unix = datetime.datetime.utcnow()
+                if unix > datetime_object:
+                    try:
+                        self.cook_dick.pop(domain)
+                    except KeyError as e:
+                        pass
+                    else:
+                        continue
 
             # DICK
             if domain not in self.cook_dick:
@@ -667,10 +675,10 @@ class HttpClient(object):
         hblock = all_headers.split("\r\n")
         for bl in hblock:
             bl_patt = bl.lower().split(": ")
-            if bl_patt[0] == "set-cookie":
+            if bl_patt[0].lower() == "set-cookie":
                 cookies_list.append(bl_patt[1])
             else:
-                headers[bl_patt[0]] = bl_patt[1]
+                headers[bl_patt[0].lower()] = bl_patt[1].lower()
 
         headers["set-cookie"] = cookies_list
         return (headers, cookies_list)
@@ -1022,6 +1030,10 @@ class HttpClient(object):
 
     def write_cookies(self, cook_dick, directory):
         if self.save_cookie is not None:
+            for k in list(cook_dick.keys())[:]:
+                if (k in cook_dick and
+                        cook_dick[k]["params"]["expires"] is None):
+                    cook_dick.pop(k)
             cookies_json = json.dumps(cook_dick, separators=(',', ':'))
             with open(directory, "w", encoding='utf-8') as fp:
                 fp.write(cookies_json)
