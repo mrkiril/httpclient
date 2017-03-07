@@ -399,6 +399,29 @@ class HttpClient(object):
         cookies = "; ".join(cook_part)
         return (cookies, host_url_and_query, new_Host)
 
+    def time_creator(self, date, w, m, y):
+        try:
+            time_template = "{0}, %d-{1}-{2} %H:%M:%S GMT".format(w, m, y)
+            datetime_object = datetime.datetime.strptime(date, time_template)
+        except ValueError as e:
+            return None
+        else:
+            return datetime_object
+
+    def expires_parser(self, date):
+        weekday = ["%a", "%A", "%w"]
+        month = ["%B", "%b", "%m"]
+        year = ["%Y", "%y"]
+        for w in weekday:
+            for m in month:
+                for y in year:
+                    ob = self.time_creator(date, w, m, y)
+                    if ob is None:
+                        continue
+                    else:
+                        return ob
+        return None
+
     def cookies_parsing_funk(self, cookies_list, start_host):
         for el_cookies_list in cookies_list:
             m_cook = re.split("; ?", el_cookies_list)
@@ -430,8 +453,11 @@ class HttpClient(object):
                 params["expires"] = None
             if "expires" in temp_dick:
                 params["expires"] = temp_dick.pop("expires")
-                datetime_object = datetime.datetime.strptime(
-                    params["expires"], '%A, %d-%b-%Y %H:%M:%S GMT')
+                # 'Tue, 05-Sep-2017 17:24:46 GMT'
+                datetime_object = self.expires_parser(params["expires"])
+                if datetime_object is None:
+                    continue
+
                 self.logger.debug("DATE TIME COOKIES " + str(datetime_object))
                 unix = datetime.datetime.utcnow()
                 if unix > datetime_object:
@@ -500,8 +526,7 @@ class HttpClient(object):
 
                     q += via.encode()
 
-        if (type_of_request == "HEAD" or type_of_request == "DELETE" or
-                type_of_request == "GET"):
+        if type_of_request in ["GET", "HEAD", "DELETE"]:
             q += CRLF
             if not self.nonblocking:
                 num = self.soket_send(q)
@@ -510,7 +535,7 @@ class HttpClient(object):
                 self.nonblocking_stack.append(q)
                 return self.nonblocking_stack
 
-        if type_of_request == "POST" or type_of_request == "PUT":
+        if type_of_request in ["POST", "PUT"]:
             if "data" in kwargs:
                 q += b"Content-Type: application/x-www-form-urlencoded" + CRLF
             if "files" in kwargs:
@@ -521,7 +546,7 @@ class HttpClient(object):
             if "data" in kwargs:
                 payload_el = "&".join([k + "=" + v for k, v in
                                            kwargs["data"].items()])
-                byte_len = str(len(payload_el))
+                byte_len = str(len(payload_el.encode()))
                 q += b"Content-Length: " + byte_len.encode() + CRLF
 
             if "files" in kwargs:
@@ -614,7 +639,6 @@ class HttpClient(object):
             if "data" in kwargs:
                 payload_el = "&".join([k + "=" + v for k, v in
                                        kwargs["data"].items()])
-                # self.soket_send(payload_el.encode())
                 if self.nonblocking:
                     self.nonblocking_stack.append(payload_el.encode())
 
@@ -674,7 +698,7 @@ class HttpClient(object):
         summ = ""
         hblock = all_headers.split("\r\n")
         for bl in hblock:
-            bl_patt = bl.lower().split(": ")
+            bl_patt = bl.split(": ")
             if bl_patt[0].lower() == "set-cookie":
                 cookies_list.append(bl_patt[1])
             else:
@@ -684,9 +708,11 @@ class HttpClient(object):
         return (headers, cookies_list)
 
     def content_length_nonblocking(self):
+        c_len = int(self.headers["content-length"])
         self.logger.debug("Conent len mode")
-        self.logger.debug("len is: " + str(self.headers["content-length"]))
+        self.logger.debug("len is: " + str(c_len))
         page_bytes = self.data[self.start_index:]
+
         if "on_progress" in self.kwargs:
             on_progress = self.kwargs["on_progress"]
             prog_status = on_progress(
@@ -697,10 +723,10 @@ class HttpClient(object):
                     return(True, self.page[0:self.max_size])
                 return (True, self.page)
 
-        if int(self.headers["content-length"]) <= 0:
+        if c_len <= 0:
             return (True, self.page)
 
-        if int(self.headers["content-length"]) > 0:
+        if c_len > 0:
             if self.firstin:
                 if "output" in self.kwargs:
                     with open(self.kwargs["output"], "wb") as fp:
@@ -714,7 +740,7 @@ class HttpClient(object):
             if self.max_size is not None and self.max_size < len(page_bytes):
                 return(True, page_bytes[0:self.max_size])
 
-            if len(page_bytes) < int(self.headers["content-length"]):
+            if len(page_bytes) < c_len:
                 response = self.sock.recv(65536)
                 if "output" in self.kwargs:
                     with open(self.kwargs["output"], "ab") as fp:
@@ -725,15 +751,14 @@ class HttpClient(object):
                             fp.write(for_file[curent_size:self.max_size])
 
                         if self.max_size is None:
-                            fp.write(page_bytes[curent_size:])
+                            fp.write(page_bytes[curent_size:c_len])
 
                 self.data += response
                 page_bytes = self.data[self.start_index:]
                 self.logger.debug("Now is body data: " + str(len(page_bytes)))
-                self.logger.debug("content-lenght:" +
-                                  str(self.headers["content-length"]))
+                self.logger.debug("content-lenght:" + str(c_len))
 
-                if len(page_bytes) >= int(self.headers["content-length"]):
+                if len(page_bytes) >= c_len:
                     if "output" in self.kwargs:
                         # logger
                         self.logger.info("Download to file is complited.")
@@ -741,17 +766,18 @@ class HttpClient(object):
                     if (self.max_size is not None and
                             self.max_size < len(page_bytes)):
                         return(True, self.page[0:self.max_size])
-                    return (True, self.page)
+                    return (True, self.page[:c_len])
                 return (False, b"")
 
-            if len(page_bytes) >= int(self.headers["content-length"]):
+            if len(page_bytes) >= c_len:
                 if "output" in self.kwargs:
                     self.logger.info("Download to file is complited.")
+
                 self.page += self.data[self.start_index:]
                 if (self.max_size is not None and
                         self.max_size < len(page_bytes)):
                     return(True, self.page[0:self.max_size])
-                return (True, self.page)
+                return (True, self.page[:c_len])
 
     def content_length(self, page_bytes,
                        transfer_timeout, kwargs, max_size):
@@ -797,7 +823,7 @@ class HttpClient(object):
                         int(self.headers["content-length"]))
                     if not prog_status:
                         break
-        return (True, page_bytes)
+        return (True, page_bytes[:int(self.headers["content-length"])])
 
     def transfer_encodong_nonblocking(self):
         self.logger.debug("Chunked  mode")
@@ -929,6 +955,7 @@ class HttpClient(object):
 
             if max_size is not None:
                 if len(page_str) >= max_size:
+                    self.del_sock()
                     break
 
         if max_size is None:
@@ -1506,7 +1533,6 @@ class HttpClient(object):
                 num = self.soket_funk(url, kwargs, headers_all,
                                       url_previos, type_req,
                                       bytes_to_send)
-
                 result = self.soket_recv(16, transfer_timeout)
                 try:
                     first_str = result[1].decode("ascii")
@@ -1538,7 +1564,12 @@ class HttpClient(object):
 
                         if m_headers is not None:
                             break
-                    all_headers = m_headers.group().decode("ascii")
+                    all_headers = m_headers.group()
+                    try:
+                        all_headers = all_headers.decode("ascii")
+                    except UnicodeDecodeError as e:
+                        self.logger.error("Invalid headers!")
+                        return self
                     headers_and_startindex = self.search_headers(all_headers)
                     # start index of message body
                     start_index = m_headers.span()[1]
@@ -1596,7 +1627,6 @@ class HttpClient(object):
                                     page += response[1]
                                 if not response[0]:
                                     self.logger.error("Content Len: ERROR")
-                                    break
                                 self.body = page
 
                             if "transfer-encoding" in self.headers:
@@ -1613,7 +1643,6 @@ class HttpClient(object):
                                     page += response[1]
                                 if not response[0]:
                                     self.logger.error("Chanked: ERROR")
-                                    break
                                 self.body = page
 
                             # Conection Closed
@@ -1634,7 +1663,6 @@ class HttpClient(object):
                                     self.del_sock()
                                 if not response[0]:
                                     self.logger.error("Conection close: ERROR")
-                                    break
                                 self.body = page
 
                         # With domain allocates part .example.xxx

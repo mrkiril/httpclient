@@ -329,6 +329,8 @@ class Test_urllib(unittest.TestCase):
         res = self.client.head('http://451f.tk/kiril.kuchelny/')
         self.assertEqual(res.status_code, "200")
 
+
+        
         # Неблокуючий режим для GET
         # З кукі, та хедерами
         # та набором параметрів
@@ -361,6 +363,10 @@ class Test_urllib(unittest.TestCase):
                 continue
             else:
                 break
+
+        print(len(res1.body))
+        print(len(res2.body))
+
         for res in arr_obj:
             self.assertRegex(res.body, b'"q": "Trump"')
             self.assertRegex(res.body, b'"start": "10"')
@@ -369,7 +375,7 @@ class Test_urllib(unittest.TestCase):
             self.assertEqual(res.status_code, "200")
 
         print(time.time() - start_time)
-        
+
         # Неблокуючий режим для GET
         # таймаут відправки данних
         payload = {'q': "Trump", 'start': '10'}
