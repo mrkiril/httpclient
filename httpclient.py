@@ -671,7 +671,7 @@ class HttpClient(object):
             num = self.sock.send(q)
             self.req_line += q
         except socket.error as e:
-            self.logger.error(str(e))
+            self.logger.debug(str(e))
             raise
         else:
             return num
@@ -1130,7 +1130,7 @@ class HttpClient(object):
                     return False
 
         except BlockingIOError as e:
-            self.logger.error(str(e))
+            self.logger.debug(str(e))
             raise
 
         except socket.error as e:
